@@ -1,10 +1,15 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Home, DollarSign, Shield, Users, Clock, CheckCircle, ArrowRight, Phone, MessageCircle, QrCode, BadgeCheck, Zap, TrendingUp } from "lucide-react";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
+import { useAuth } from "@/components/Auth/AuthProvider";
 import hostImg from "@/assets/host-homeowner.jpg";
 import FeatureCard from "@/components/FeatureCard";
 import FAQAccordion from "@/components/FAQAccordion";
 import CTABanner from "@/components/CTABanner";
+import HostRegistrationModal from "@/components/HostRegistration/HostRegistrationModal";
+import { Button } from "@/components/ui/button";
+import GoogleLoginModal from "@/components/Auth/GoogleLoginModal";
 
 const steps = [
   { icon: Home, title: "Register Your Home", desc: "Sign up and add your address, outlet type, and photos." },
@@ -23,6 +28,17 @@ const hostFaqs = [
 
 export default function BecomeHost() {
   useScrollReveal();
+  const { user } = useAuth();
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+
+  const handleRegisterNow = () => {
+    if (!user) {
+      setShowLoginModal(true);
+    } else {
+      setShowRegistrationModal(true);
+    }
+  };
 
   return (
     <div className="pt-24">
@@ -43,9 +59,12 @@ export default function BecomeHost() {
                 List your electricity outlet on ChargeNest and earn money every time an EV rider charges at your location. Simple setup, zero investment.
               </p>
               <div className="flex flex-wrap gap-4">
-                <button className="px-8 py-4 rounded-xl gradient-green text-white font-semibold text-lg shadow-xl hover:opacity-90 hover:-translate-y-1 transition-all flex items-center gap-2">
+                <Button
+                  onClick={handleRegisterNow}
+                  className="px-8 py-4 rounded-xl gradient-green text-white font-semibold text-lg shadow-xl hover:opacity-90 hover:-translate-y-1 transition-all flex items-center gap-2"
+                >
                   Register Now <ArrowRight className="w-5 h-5" />
-                </button>
+                </Button>
                 <a href="tel:+919876543210" className="px-8 py-4 rounded-xl bg-white/10 text-white border border-white/20 font-semibold hover:bg-white/20 transition-all flex items-center gap-2">
                   <Phone className="w-5 h-5" /> Call Us
                 </a>
@@ -218,6 +237,16 @@ export default function BecomeHost() {
       </section>
 
       <CTABanner variant="dark" title="Ready to Earn?" subtitle="Join 300+ verified hosts already earning from their home outlets." />
+
+      {/* Modals */}
+      <HostRegistrationModal
+        isOpen={showRegistrationModal}
+        onClose={() => setShowRegistrationModal(false)}
+      />
+      <GoogleLoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+      />
     </div>
   );
 }

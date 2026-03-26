@@ -1,0 +1,40 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "hostRegistrations": {
+      "$uid": {
+        ".read": "$uid === auth.uid",
+        ".write": "$uid === auth.uid",
+        "$registrationId": {
+          ".read": "$uid === auth.uid",
+          ".write": "$uid === auth.uid && newData.child('userId').val() === auth.uid",
+          ".validate": "newData.hasChildren(['userId', 'fullName', 'email', 'phone', 'address', 'city', 'state', 'pincode', 'outletType', 'chargingSpeed', 'availableHours', 'pricePerHour', 'agreeToTerms']) && newData.child('agreeToTerms').val() === true && newData.child('userId').val() === auth.uid"
+        }
+      }
+    },
+    "chargingSpots": {
+      ".read": "auth != null",
+      "$spotId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (auth.uid === data.child('hostId').val() || auth.uid === newData.child('hostId').val())",
+        ".validate": "newData.hasChildren(['hostId', 'hostName', 'address', 'city', 'state', 'pincode', 'outletType', 'pricePerHour'])"
+      }
+    },
+    "admins": {
+      ".read": "root.child('admins').child(auth.uid).exists()",
+      ".write": false,
+      "$uid": {
+        ".read": "$uid === auth.uid || root.child('admins').child(auth.uid).exists()",
+        ".write": false
+      }
+    },
+    "users": {
+      "$uid": {
+        ".read": "$uid === auth.uid",
+        ".write": "$uid === auth.uid",
+        ".validate": "newData.hasChildren(['displayName', 'email', 'createdAt'])"
+      }
+    }
+  }
+}

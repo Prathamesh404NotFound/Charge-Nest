@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Menu, X, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "./Auth/AuthProvider";
-import LoginModal from "./Auth/LoginModal";
+import GoogleLoginModal from "./Auth/GoogleLoginModal";
 import UserMenu from "./Auth/UserMenu";
 import { Button } from "@/components/ui/button";
 
@@ -160,7 +160,7 @@ export default function Navbar() {
       )}
 
       {/* Login Modal */}
-      <LoginModal isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} />
+      <GoogleLoginModal isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} />
     </header>
   );
 }

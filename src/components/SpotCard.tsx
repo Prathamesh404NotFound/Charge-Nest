@@ -3,7 +3,7 @@ import { Star, MapPin, Clock, BadgeCheck, Phone, MessageCircle } from "lucide-re
 import { cn } from "@/lib/utils";
 import { useAuth } from "./Auth/AuthProvider";
 import { Button } from "@/components/ui/button";
-import LoginModal from "./Auth/LoginModal";
+import GoogleLoginModal from "./Auth/GoogleLoginModal";
 
 interface SpotCardProps {
   name: string;
@@ -116,7 +116,7 @@ export default function SpotCard({
 
       {/* Login Modal */}
       {showLoginModal && (
-        <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
+        <GoogleLoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
       )}
     </div>
   );
