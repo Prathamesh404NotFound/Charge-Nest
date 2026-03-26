@@ -1,12 +1,30 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import Index from "./pages/Index.tsx";
-import NotFound from "./pages/NotFound.tsx";
+import { useEffect } from "react";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import FloatingButtons from "@/components/FloatingButtons";
+import Index from "./pages/Index";
+import FindSpots from "./pages/FindSpots";
+import BecomeHost from "./pages/BecomeHost";
+import HowItWorks from "./pages/HowItWorks";
+import Pricing from "./pages/Pricing";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -14,11 +32,22 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <ScrollToTop />
+        <Navbar />
+        <main className="min-h-screen">
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/spots" element={<FindSpots />} />
+            <Route path="/host" element={<BecomeHost />} />
+            <Route path="/how-it-works" element={<HowItWorks />} />
+            <Route path="/pricing" element={<Pricing />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </main>
+        <Footer />
+        <FloatingButtons />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
