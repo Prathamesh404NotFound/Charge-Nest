@@ -155,9 +155,8 @@ export default function Dashboard() {
                   {mockBookings.map((booking) => (
                     <div key={booking.id} className="flex items-center justify-between p-4 rounded-lg border">
                       <div className="flex items-center gap-4">
-                        <div className={`w-3 h-3 rounded-full ${
-                          booking.status === "completed" ? "bg-green-500" : "bg-blue-500"
-                        }`} />
+                        <div className={`w-3 h-3 rounded-full ${booking.status === "completed" ? "bg-green-500" : "bg-blue-500"
+                          }`} />
                         <div>
                           <p className="font-medium">{booking.spot}</p>
                           <p className="text-sm text-muted-foreground">{booking.date} • {booking.duration}</p>
