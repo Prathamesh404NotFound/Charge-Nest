@@ -57,19 +57,19 @@ export default function UserMenu() {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link to="/bookings" className="flex items-center gap-2">
+          <Link to="/dashboard/bookings" className="flex items-center gap-2">
             <History className="w-4 h-4" />
             Booking History
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link to="/earnings" className="flex items-center gap-2">
+          <Link to="/dashboard/earnings" className="flex items-center gap-2">
             <DollarSign className="w-4 h-4" />
             My Earnings
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link to="/settings" className="flex items-center gap-2">
+          <Link to="/dashboard/settings" className="flex items-center gap-2">
             <Settings className="w-4 h-4" />
             Settings
           </Link>

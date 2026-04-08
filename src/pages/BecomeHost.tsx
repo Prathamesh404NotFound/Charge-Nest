@@ -163,63 +163,51 @@ export default function BecomeHost() {
         </div>
       </section>
 
-      {/* Registration Form */}
+      {/* Registration CTA */}
       <section className="py-20 bg-soft-gray">
         <div className="container mx-auto px-4 max-w-2xl">
-          <div className="text-center mb-12 reveal">
-            <h2 className="font-display font-bold text-3xl md:text-4xl text-foreground mb-4">
-              Register Your Interest
-            </h2>
-            <p className="text-muted-foreground">Fill in your details and our team will get in touch to help you get started.</p>
-          </div>
-          <div className="reveal bg-card rounded-2xl border border-border p-8 shadow-sm">
-            <form className="space-y-5">
-              <div className="grid sm:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Full Name</label>
-                  <input type="text" placeholder="Your name" className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+          <div className="reveal bg-card rounded-3xl border border-border p-10 shadow-lg text-center space-y-6">
+            {/* Icon */}
+            <div className="w-20 h-20 gradient-green rounded-2xl flex items-center justify-center mx-auto shadow-lg">
+              <Home className="w-10 h-10 text-white" />
+            </div>
+
+            <div>
+              <h2 className="font-display font-bold text-3xl md:text-4xl text-foreground mb-3">
+                Ready to Start Earning?
+              </h2>
+              <p className="text-muted-foreground max-w-md mx-auto leading-relaxed">
+                Complete our quick 5-step registration — share your details, charging setup, and pin your exact location. It takes less than 5 minutes.
+              </p>
+            </div>
+
+            {/* Steps preview */}
+            <div className="grid grid-cols-5 gap-2 max-w-sm mx-auto">
+              {["Personal Info", "Address", "Charging Setup", "GPS Location", "Verification"].map((label, i) => (
+                <div key={i} className="flex flex-col items-center gap-1">
+                  <div className="w-8 h-8 rounded-full gradient-green text-white text-xs font-bold flex items-center justify-center shadow">
+                    {i + 1}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground text-center leading-tight">{label}</span>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Phone Number</label>
-                  <input type="tel" placeholder="+91 98765 43210" className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Area / Locality</label>
-                <input type="text" placeholder="Your area, city" className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-              </div>
-              <div className="grid sm:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Outlet Type</label>
-                  <select className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                    <option>3-Pin Socket</option>
-                    <option>5-Amp Socket</option>
-                    <option>15-Amp Socket</option>
-                    <option>EV Charger</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Preferred Pricing</label>
-                  <select className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                    <option>Rs 5 / 10 min</option>
-                    <option>Rs 8 / 10 min</option>
-                    <option>Rs 10 / 10 min</option>
-                    <option>Rs 15 / 10 min</option>
-                  </select>
-                </div>
-              </div>
-              <button type="button" className="w-full px-8 py-4 rounded-xl gradient-green text-white font-semibold text-lg shadow-lg hover:opacity-90 transition-all">
-                Submit Interest
-              </button>
-            </form>
-          </div>
-          <div className="flex justify-center gap-4 mt-8">
-            <a href="tel:+919876543210" className="flex items-center gap-2 px-6 py-3 rounded-xl border border-border bg-card text-foreground font-medium hover:shadow-md transition-all">
-              <Phone className="w-4 h-4 text-primary" /> Call Now
-            </a>
-            <a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-6 py-3 rounded-xl border border-border bg-card text-foreground font-medium hover:shadow-md transition-all">
-              <MessageCircle className="w-4 h-4 text-ev-green" /> WhatsApp
-            </a>
+              ))}
+            </div>
+
+            <Button
+              onClick={handleRegisterNow}
+              className="px-10 py-4 rounded-xl gradient-green text-white font-semibold text-lg shadow-xl hover:opacity-90 hover:-translate-y-1 transition-all flex items-center gap-2 mx-auto"
+            >
+              Start Registration <ArrowRight className="w-5 h-5" />
+            </Button>
+
+            <div className="flex justify-center gap-4 pt-2">
+              <a href="tel:+919876543210" className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm font-medium hover:shadow-md transition-all">
+                <Phone className="w-4 h-4 text-primary" /> Call Us
+              </a>
+              <a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm font-medium hover:shadow-md transition-all">
+                <MessageCircle className="w-4 h-4 text-ev-green" /> WhatsApp
+              </a>
+            </div>
           </div>
         </div>
       </section>

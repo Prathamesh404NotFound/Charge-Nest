@@ -1,233 +1,199 @@
-import { useState } from "react";
-import { User, MapPin, Clock, DollarSign, Zap, TrendingUp, Calendar, Star, Phone, MessageCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { User, MapPin, Clock, DollarSign, Zap, TrendingUp, History, Settings, Car } from "lucide-react";
 import { useAuth } from "@/components/Auth/AuthProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Link } from "react-router-dom";
 import SpotCard from "@/components/SpotCard";
-
-const mockBookings = [
-  { id: 1, spot: "Anand's Home Charging", date: "2024-03-26", duration: "45 min", cost: "Rs 45", status: "completed" },
-  { id: 2, spot: "Green Park Outlet", date: "2024-03-25", duration: "30 min", cost: "Rs 24", status: "completed" },
-  { id: 3, spot: "Sunrise Apartments", date: "2024-03-28", duration: "60 min", cost: "Rs 72", status: "upcoming" },
-];
-
-const mockHostEarnings = [
-  { date: "2024-03-26", charges: 3, earnings: "Rs 120" },
-  { date: "2024-03-25", charges: 2, earnings: "Rs 80" },
-  { date: "2024-03-24", charges: 5, earnings: "Rs 200" },
-];
-
-const featuredSpots = [
-  { name: "Anand's Home Charging", host: "Anand Verma", distance: "0.8 km", price: "Rs 10", rating: 4.8, reviews: 42, isOpen: true, isVerified: true, isFeatured: true },
-  { name: "Green Park Outlet", host: "Meera Joshi", distance: "1.2 km", price: "Rs 8", rating: 4.6, reviews: 28, isOpen: true, isVerified: true, isFeatured: false },
-];
+import HostRegistrationModal from "@/components/HostRegistration/HostRegistrationModal";
+import { getUserProfile, UserProfile } from "@/lib/userService";
+import { getUserBookings, BookingRequest } from "@/lib/bookingService";
+import { Loader2 } from "lucide-react";
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("overview");
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [bookings, setBookings] = useState<BookingRequest[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const totalSpent = mockBookings
+  useEffect(() => {
+    if (!user) return;
+    Promise.all([
+      getUserProfile(user.uid),
+      getUserBookings(user.uid)
+    ]).then(([p, b]) => {
+      setProfile(p);
+      setBookings(b);
+    }).finally(() => {
+      setLoading(false);
+    });
+  }, [user]);
+
+  const totalSpent = bookings
     .filter(b => b.status === "completed")
-    .reduce((sum, b) => sum + parseInt(b.cost.replace(/\D/g, "")), 0);
+    .reduce((sum, b) => sum + (b.estimatedCost || (b.pricePerHour * b.duration) / 60), 0);
 
-  const totalEarned = mockHostEarnings
-    .reduce((sum, e) => sum + parseInt(e.earnings.replace(/\D/g, "")), 0);
+  const completedCount = bookings.filter(b => b.status === "completed").length;
+
+  if (loading) {
+    return (
+      <div className="pt-24 pb-16 min-h-[60vh] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="pt-24 pb-16">
       <div className="container mx-auto px-4">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="font-display font-bold text-3xl md:text-4xl text-card-foreground mb-2">
-            Welcome back, {user?.displayName || "User"}!
-          </h1>
-          <p className="text-muted-foreground">
-            Manage your charging sessions and host earnings
-          </p>
+        <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <h1 className="font-display font-bold text-3xl md:text-4xl text-card-foreground mb-2">
+              Welcome back, {profile?.displayName || user?.displayName || "User"}!
+            </h1>
+            <p className="text-muted-foreground">
+              Manage your charging sessions and host earnings
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" className="gap-2" asChild>
+              <Link to="/dashboard/settings"><Settings className="w-4 h-4" />Settings</Link>
+            </Button>
+            {profile?.role === "host" || profile?.role === "admin" ? (
+              <Button className="gap-2 gradient-green" asChild>
+                <Link to="/dashboard/earnings"><DollarSign className="w-4 h-4" />Host Dashboard</Link>
+              </Button>
+            ) : (
+              <Button className="gap-2 gradient-primary" asChild>
+                <Link to="/spots"><Car className="w-4 h-4" />Find Spots</Link>
+              </Button>
+            )}
+          </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="bookings">My Bookings</TabsTrigger>
-            <TabsTrigger value="hosting">Hosting</TabsTrigger>
-          </TabsList>
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">₹{Math.round(totalSpent)}</div>
+              <p className="text-xs text-muted-foreground">All time charging costs</p>
+            </CardContent>
+          </Card>
 
-          <TabsContent value="overview" className="space-y-6">
-            {/* Stats Cards */}
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">Rs {totalSpent}</div>
-                  <p className="text-xs text-muted-foreground">
-                    +20% from last month
-                  </p>
-                </CardContent>
-              </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Sessions</CardTitle>
+              <Zap className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{completedCount}</div>
+              <p className="text-xs text-muted-foreground">Completed charges</p>
+            </CardContent>
+          </Card>
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Sessions</CardTitle>
-                  <Zap className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{mockBookings.length}</div>
-                  <p className="text-xs text-muted-foreground">
-                    +2 from last week
-                  </p>
-                </CardContent>
-              </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
+              <History className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{bookings.length}</div>
+              <p className="text-xs text-muted-foreground">Including pending & cancelled</p>
+            </CardContent>
+          </Card>
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Avg Duration</CardTitle>
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">45 min</div>
-                  <p className="text-xs text-muted-foreground">
-                    +5 min from average
-                  </p>
-                </CardContent>
-              </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Saved CO₂</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{completedCount * 4 || "—"} kg</div>
+              <p className="text-xs text-muted-foreground">Estimated environmental impact</p>
+            </CardContent>
+          </Card>
+        </div>
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Saved CO₂</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">12 kg</div>
-                  <p className="text-xs text-muted-foreground">
-                    Environmental impact
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Recent Activity */}
-            <div className="grid lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Bookings</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {mockBookings.slice(0, 3).map((booking) => (
-                    <div key={booking.id} className="flex items-center justify-between p-3 rounded-lg border">
-                      <div>
-                        <p className="font-medium">{booking.spot}</p>
-                        <p className="text-sm text-muted-foreground">{booking.date}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium">{booking.cost}</p>
-                        <p className="text-sm text-muted-foreground">{booking.duration}</p>
-                      </div>
+        <div className="grid lg:grid-cols-2 gap-6">
+          <Card className="flex flex-col">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Recent Bookings</CardTitle>
+              <Link to="/dashboard/bookings" className="text-sm text-primary hover:underline font-medium">
+                View All
+              </Link>
+            </CardHeader>
+            <CardContent className="space-y-4 flex-1">
+              {bookings.length === 0 ? (
+                <div className="text-center py-10">
+                  <p className="text-muted-foreground mb-4">You haven't booked any charging sessions yet.</p>
+                  <Button asChild><Link to="/spots">Find a Spot</Link></Button>
+                </div>
+              ) : (
+                bookings.slice(0, 4).map((booking) => (
+                  <div key={booking.id} className="flex items-center justify-between p-3 rounded-lg border">
+                    <div>
+                      <p className="font-medium text-sm">{booking.spotName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(typeof booking.requestedAt === "number" ? booking.requestedAt : Date.now()).toLocaleDateString("en-IN", { month: "short", day: "2-digit" })}
+                      </p>
                     </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recommended Spots</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {featuredSpots.map((spot, index) => (
-                    <SpotCard key={index} {...spot} />
-                  ))}
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="bookings" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Booking History</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {mockBookings.map((booking) => (
-                    <div key={booking.id} className="flex items-center justify-between p-4 rounded-lg border">
-                      <div className="flex items-center gap-4">
-                        <div className={`w-3 h-3 rounded-full ${booking.status === "completed" ? "bg-green-500" : "bg-blue-500"
-                          }`} />
-                        <div>
-                          <p className="font-medium">{booking.spot}</p>
-                          <p className="text-sm text-muted-foreground">{booking.date} • {booking.duration}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <p className="font-medium">{booking.cost}</p>
-                          <p className="text-sm text-muted-foreground capitalize">{booking.status}</p>
-                        </div>
-                        {booking.status === "upcoming" && (
-                          <Button size="sm">View Details</Button>
-                        )}
-                      </div>
+                    <div className="text-right">
+                      <p className="font-medium text-sm">₹{booking.estimatedCost || Math.round((booking.pricePerHour * booking.duration)/60)}</p>
+                      <span className={`text-[10px] uppercase font-bold tracking-wide ${booking.status === "completed" ? "text-green-600" : booking.status === "pending" || booking.status === "approved" ? "text-amber-500" : "text-muted-foreground"}`}>
+                        {booking.status}
+                      </span>
                     </div>
-                  ))}
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          {profile?.role !== "host" && profile?.role !== "admin" && (
+            <Card className="overflow-hidden relative bg-gradient-to-br from-ev-green/10 to-primary/10 border-none">
+              <CardContent className="p-8 pb-10 mt-4 text-center">
+                <div className="w-16 h-16 gradient-green rounded-2xl flex items-center justify-center mx-auto shadow-lg mb-5">
+                  <Zap className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="font-display font-bold text-2xl text-foreground mb-2">Want to earn with ChargeNest?</h3>
+                <p className="text-muted-foreground max-w-sm mx-auto mb-6 text-sm">
+                  Register your home outlet to start earning ₹3,000–5,000+ per month. Registration is free and takes 5 minutes.
+                </p>
+                <div className="flex gap-3 justify-center">
+                  <Button className="gradient-green w-40" asChild>
+                    <Link to="/host">Register</Link>
+                  </Button>
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
+          )}
 
-          <TabsContent value="hosting" className="space-y-6">
-            <div className="grid lg:grid-cols-3 gap-6">
-              <Card className="lg:col-span-2">
-                <CardHeader>
-                  <CardTitle>Host Earnings</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {mockHostEarnings.map((earning, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 rounded-lg border">
-                        <div>
-                          <p className="font-medium">{earning.date}</p>
-                          <p className="text-sm text-muted-foreground">{earning.charges} charging sessions</p>
-                        </div>
-                        <p className="font-medium">{earning.earnings}</p>
-                      </div>
-                    ))}
-                    <div className="pt-4 border-t">
-                      <div className="flex items-center justify-between">
-                        <p className="font-medium">Total Earnings</p>
-                        <p className="text-xl font-bold text-green-600">{totalEarned}</p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Host Stats</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="text-center">
-                    <p className="text-3xl font-bold text-primary">4.8</p>
-                    <p className="text-sm text-muted-foreground">Average Rating</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-3xl font-bold text-primary">24</p>
-                    <p className="text-sm text-muted-foreground">Total Charges</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-3xl font-bold text-primary">98%</p>
-                    <p className="text-sm text-muted-foreground">Response Rate</p>
-                  </div>
-                  <Button className="w-full">Manage Listing</Button>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-        </Tabs>
+          {(profile?.role === "host" || profile?.role === "admin") && (
+            <Card className="flex flex-col">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Host Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button variant="outline" className="w-full justify-start h-14 text-base gap-3" asChild>
+                  <Link to="/dashboard/earnings">
+                    <DollarSign className="w-5 h-5 text-green-600" />
+                    View Host Earnings
+                  </Link>
+                </Button>
+                <Button variant="outline" className="w-full justify-start h-14 text-base gap-3" asChild>
+                  <Link to="/spots">
+                    <MapPin className="w-5 h-5 text-primary" />
+                    View My Spots
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
     </div>
   );
