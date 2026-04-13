@@ -43,24 +43,24 @@ export default function Navbar() {
           : "bg-transparent py-5"
       )}
     >
-      <div className="container mx-auto px-4 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2 group">
-          <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-lg group-hover:shadow-primary/40 transition-shadow">
-            <Zap className="w-5 h-5 text-primary-foreground" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+        <Link to="/" className="flex items-center gap-2 group flex-shrink-0">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl gradient-primary flex items-center justify-center shadow-lg group-hover:shadow-primary/40 transition-shadow">
+            <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />
           </div>
-          <span className="font-display font-bold text-xl text-foreground">
+          <span className="font-display font-bold text-lg sm:text-xl text-foreground">
             ChargeNest
           </span>
         </Link>
 
         {/* Desktop Nav */}
-        <nav className="hidden lg:flex items-center gap-1">
+        <nav className="hidden xl:flex items-center gap-1">
           {navLinks.map((link) => (
             <Link
               key={link.to}
               to={link.to}
               className={cn(
-                "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-primary/10 hover:text-primary",
+                "px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-primary/10 hover:text-primary",
                 location.pathname === link.to
                   ? "text-primary bg-primary/10"
                   : "text-muted-foreground"
@@ -71,15 +71,16 @@ export default function Navbar() {
           ))}
         </nav>
 
-        <div className="hidden lg:flex items-center gap-3">
+        <div className="hidden xl:flex items-center gap-2 sm:gap-3">
           {user ? (
             <>
               <UserMenu />
               <Link
                 to="/spots"
-                className="px-5 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5"
+                className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5"
               >
-                Find a Spot
+                <span className="hidden sm:inline">Find a Spot</span>
+                <span className="sm:hidden">Spots</span>
               </Link>
             </>
           ) : (
@@ -87,13 +88,13 @@ export default function Navbar() {
               <Button
                 variant="ghost"
                 onClick={() => setLoginModalOpen(true)}
-                className="font-semibold"
+                className="font-semibold text-sm sm:text-base px-3 sm:px-4"
               >
                 Sign In
               </Button>
               <Button
                 onClick={() => setLoginModalOpen(true)}
-                className="px-5 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5"
+                className="px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5"
               >
                 Get Started
               </Button>
@@ -101,19 +102,20 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Mobile Toggle */}
+        {/* Tablet & Mobile Toggle */}
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
-          className="lg:hidden p-2 rounded-lg hover:bg-muted transition-colors"
+          className="xl:hidden p-2 rounded-lg hover:bg-muted transition-colors"
+          aria-label="Toggle menu"
         >
-          {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          {mobileOpen ? <X className="w-5 h-5 sm:w-6 sm:h-6" /> : <Menu className="w-5 h-5 sm:w-6 sm:h-6" />}
         </button>
       </div>
 
       {/* Mobile Drawer */}
       {mobileOpen && (
-        <div className="lg:hidden absolute top-full left-0 right-0 glass border-t border-border animate-slide-down">
-          <nav className="container mx-auto px-4 py-4 flex flex-col gap-1">
+        <div className="xl:hidden absolute top-full left-0 right-0 glass border-t border-border animate-slide-down">
+          <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-col gap-1">
             {navLinks.map((link) => (
               <Link
                 key={link.to}
@@ -129,7 +131,7 @@ export default function Navbar() {
               </Link>
             ))}
             {user ? (
-              <div className="mt-2 flex items-center gap-3 px-4">
+              <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row items-center gap-3 px-4">
                 <UserMenu />
                 <Link
                   to="/spots"
@@ -139,11 +141,11 @@ export default function Navbar() {
                 </Link>
               </div>
             ) : (
-              <div className="mt-2 flex flex-col gap-2 px-4">
+              <div className="mt-4 sm:mt-6 flex flex-col gap-2 px-4">
                 <Button
                   variant="ghost"
                   onClick={() => setLoginModalOpen(true)}
-                  className="font-semibold"
+                  className="font-semibold text-sm sm:text-base justify-center"
                 >
                   Sign In
                 </Button>

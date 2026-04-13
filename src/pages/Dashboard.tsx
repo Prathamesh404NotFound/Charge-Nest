@@ -19,8 +19,8 @@ export default function Dashboard() {
   useEffect(() => {
     if (!user) return;
     Promise.all([
-      getUserProfile(user.uid),
-      getUserBookings(user.uid)
+      getUserProfile(user.id),
+      getUserBookings(user.id)
     ]).then(([p, b]) => {
       setProfile(p);
       setBookings(b);
@@ -37,163 +37,155 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="pt-24 pb-16 min-h-[60vh] flex items-center justify-center">
+      <div className="flex items-center justify-center py-12">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="pt-24 pb-16">
-      <div className="container mx-auto px-4">
-        {/* Header */}
-        <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <h1 className="font-display font-bold text-3xl md:text-4xl text-card-foreground mb-2">
-              Welcome back, {profile?.displayName || user?.displayName || "User"}!
-            </h1>
-            <p className="text-muted-foreground">
-              Manage your charging sessions and host earnings
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" className="gap-2" asChild>
-              <Link to="/dashboard/settings"><Settings className="w-4 h-4" />Settings</Link>
-            </Button>
-            {profile?.role === "host" || profile?.role === "admin" ? (
-              <Button className="gap-2 gradient-green" asChild>
-                <Link to="/dashboard/earnings"><DollarSign className="w-4 h-4" />Host Dashboard</Link>
-              </Button>
+    <div className="container mx-auto px-4">
+      {/* Header */}
+      <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="font-display font-bold text-3xl md:text-4xl text-card-foreground mb-2">
+            Welcome back, {profile?.displayName || user?.displayName || "User"}!
+          </h1>
+          <p className="text-muted-foreground">
+            Manage your charging sessions and host earnings
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" className="gap-2" asChild>
+            <Link to="/spots">
+              <MapPin className="w-4 h-4" />
+              Find Spots
+            </Link>
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₹{Math.round(totalSpent)}</div>
+            <p className="text-xs text-muted-foreground">All time charging costs</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Sessions</CardTitle>
+            <Zap className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{completedCount}</div>
+            <p className="text-xs text-muted-foreground">Completed charges</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
+            <History className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{bookings.length}</div>
+            <p className="text-xs text-muted-foreground">Including pending & cancelled</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Saved CO₂</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{completedCount * 4 || "—"} kg</div>
+            <p className="text-xs text-muted-foreground">Estimated environmental impact</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        <Card className="flex flex-col">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Recent Bookings</CardTitle>
+            <Link to="/dashboard/bookings" className="text-sm text-primary hover:underline font-medium">
+              View All
+            </Link>
+          </CardHeader>
+          <CardContent className="space-y-4 flex-1">
+            {bookings.length === 0 ? (
+              <div className="text-center py-10">
+                <p className="text-muted-foreground mb-4">You haven't booked any charging sessions yet.</p>
+                <Button asChild><Link to="/spots">Find a Spot</Link></Button>
+              </div>
             ) : (
-              <Button className="gap-2 gradient-primary" asChild>
-                <Link to="/spots"><Car className="w-4 h-4" />Find Spots</Link>
-              </Button>
+              bookings.slice(0, 4).map((booking) => (
+                <div key={booking.id} className="flex items-center justify-between p-3 rounded-lg border">
+                  <div>
+                    <p className="font-medium text-sm">{booking.spotName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(typeof booking.requestedAt === "number" ? booking.requestedAt : Date.now()).toLocaleDateString("en-IN", { month: "short", day: "2-digit" })}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium text-sm">₹{booking.estimatedCost || Math.round((booking.pricePerHour * booking.duration) / 60)}</p>
+                    <span className={`text-[10px] uppercase font-bold tracking-wide ${booking.status === "completed" ? "text-green-600" : booking.status === "pending" || booking.status === "approved" ? "text-amber-500" : "text-muted-foreground"}`}>
+                      {booking.status}
+                    </span>
+                  </div>
+                </div>
+              ))
             )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">₹{Math.round(totalSpent)}</div>
-              <p className="text-xs text-muted-foreground">All time charging costs</p>
+        {profile?.role !== "host" && profile?.role !== "admin" && (
+          <Card className="overflow-hidden relative bg-gradient-to-br from-ev-green/10 to-primary/10 border-none">
+            <CardContent className="p-8 pb-10 mt-4 text-center">
+              <div className="w-16 h-16 gradient-green rounded-2xl flex items-center justify-center mx-auto shadow-lg mb-5">
+                <Zap className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="font-display font-bold text-2xl text-foreground mb-2">Want to earn with ChargeNest?</h3>
+              <p className="text-muted-foreground max-w-sm mx-auto mb-6 text-sm">
+                Register your home outlet to start earning ₹3,000–5,000+ per month. Registration is free and takes 5 minutes.
+              </p>
+              <div className="flex gap-3 justify-center">
+                <Button className="gradient-green w-40" asChild>
+                  <Link to="/host">Register</Link>
+                </Button>
+              </div>
             </CardContent>
           </Card>
+        )}
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Sessions</CardTitle>
-              <Zap className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{completedCount}</div>
-              <p className="text-xs text-muted-foreground">Completed charges</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
-              <History className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{bookings.length}</div>
-              <p className="text-xs text-muted-foreground">Including pending & cancelled</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Saved CO₂</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{completedCount * 4 || "—"} kg</div>
-              <p className="text-xs text-muted-foreground">Estimated environmental impact</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid lg:grid-cols-2 gap-6">
+        {(profile?.role === "host" || profile?.role === "admin") && (
           <Card className="flex flex-col">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Recent Bookings</CardTitle>
-              <Link to="/dashboard/bookings" className="text-sm text-primary hover:underline font-medium">
-                View All
-              </Link>
+              <CardTitle>Host Actions</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4 flex-1">
-              {bookings.length === 0 ? (
-                <div className="text-center py-10">
-                  <p className="text-muted-foreground mb-4">You haven't booked any charging sessions yet.</p>
-                  <Button asChild><Link to="/spots">Find a Spot</Link></Button>
-                </div>
-              ) : (
-                bookings.slice(0, 4).map((booking) => (
-                  <div key={booking.id} className="flex items-center justify-between p-3 rounded-lg border">
-                    <div>
-                      <p className="font-medium text-sm">{booking.spotName}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(typeof booking.requestedAt === "number" ? booking.requestedAt : Date.now()).toLocaleDateString("en-IN", { month: "short", day: "2-digit" })}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium text-sm">₹{booking.estimatedCost || Math.round((booking.pricePerHour * booking.duration)/60)}</p>
-                      <span className={`text-[10px] uppercase font-bold tracking-wide ${booking.status === "completed" ? "text-green-600" : booking.status === "pending" || booking.status === "approved" ? "text-amber-500" : "text-muted-foreground"}`}>
-                        {booking.status}
-                      </span>
-                    </div>
-                  </div>
-                ))
-              )}
+            <CardContent className="space-y-3">
+              <Button variant="outline" className="w-full justify-start h-14 text-base gap-3" asChild>
+                <Link to="/dashboard/earnings">
+                  <DollarSign className="w-5 h-5 text-green-600" />
+                  View Host Earnings
+                </Link>
+              </Button>
+              <Button variant="outline" className="w-full justify-start h-14 text-base gap-3" asChild>
+                <Link to="/spots">
+                  <MapPin className="w-5 h-5 text-primary" />
+                  View My Spots
+                </Link>
+              </Button>
             </CardContent>
           </Card>
-
-          {profile?.role !== "host" && profile?.role !== "admin" && (
-            <Card className="overflow-hidden relative bg-gradient-to-br from-ev-green/10 to-primary/10 border-none">
-              <CardContent className="p-8 pb-10 mt-4 text-center">
-                <div className="w-16 h-16 gradient-green rounded-2xl flex items-center justify-center mx-auto shadow-lg mb-5">
-                  <Zap className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="font-display font-bold text-2xl text-foreground mb-2">Want to earn with ChargeNest?</h3>
-                <p className="text-muted-foreground max-w-sm mx-auto mb-6 text-sm">
-                  Register your home outlet to start earning ₹3,000–5,000+ per month. Registration is free and takes 5 minutes.
-                </p>
-                <div className="flex gap-3 justify-center">
-                  <Button className="gradient-green w-40" asChild>
-                    <Link to="/host">Register</Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {(profile?.role === "host" || profile?.role === "admin") && (
-            <Card className="flex flex-col">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Host Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button variant="outline" className="w-full justify-start h-14 text-base gap-3" asChild>
-                  <Link to="/dashboard/earnings">
-                    <DollarSign className="w-5 h-5 text-green-600" />
-                    View Host Earnings
-                  </Link>
-                </Button>
-                <Button variant="outline" className="w-full justify-start h-14 text-base gap-3" asChild>
-                  <Link to="/spots">
-                    <MapPin className="w-5 h-5 text-primary" />
-                    View My Spots
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );

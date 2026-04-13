@@ -12,13 +12,16 @@ import CTABanner from "@/components/CTABanner";
 import { useState, useEffect } from "react";
 import { getAllChargingSpots } from "@/lib/hostRegistration";
 import BookingModal from "@/components/BookingModal";
+import { useAuth } from "@/components/Auth/AuthProvider";
+import GoogleLoginModal from "@/components/Auth/GoogleLoginModal";
 
 const Index = () => {
   useScrollReveal();
-  
+  const { user } = useAuth();
   const [featuredSpots, setFeaturedSpots] = useState<any[]>([]);
   const [loadingSpots, setLoadingSpots] = useState(true);
   const [selectedSpot, setSelectedSpot] = useState<any | null>(null);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   useEffect(() => {
     getAllChargingSpots().then(spots => {
@@ -28,6 +31,24 @@ const Index = () => {
       setLoadingSpots(false);
     });
   }, []);
+
+  const handleBookNow = (spot: any) => {
+    if (!user) {
+      setShowLoginModal(true);
+    } else {
+      setSelectedSpot(spot);
+    }
+  };
+
+  const handleFindSpots = () => {
+    // Navigate to find spots page
+    window.location.href = '/spots';
+  };
+
+  const handleBecomeHost = () => {
+    // Navigate to become host page
+    window.location.href = '/host';
+  };
 
   return (
     <div className="overflow-hidden">
@@ -53,18 +74,18 @@ const Index = () => {
                 Charge your EV two-wheeler at verified home charging points near you. Or list your home outlet and start earning passive income from every charge.
               </p>
               <div className="flex flex-col sm:flex-row flex-wrap gap-4 justify-center lg:justify-start">
-                <Link
-                  to="/spots"
+                <button
+                  onClick={handleFindSpots}
                   className="px-8 py-4 rounded-xl gradient-primary text-white font-semibold text-lg shadow-xl hover:shadow-primary/40 hover:-translate-y-1 transition-all flex items-center justify-center gap-2"
                 >
                   <MapPin className="w-5 h-5" /> Find a Spot
-                </Link>
-                <Link
-                  to="/host"
+                </button>
+                <button
+                  onClick={handleBecomeHost}
                   className="px-8 py-4 rounded-xl bg-white/10 text-white border border-white/20 font-semibold text-lg hover:bg-white/20 hover:-translate-y-1 transition-all flex items-center justify-center gap-2"
                 >
                   <Home className="w-5 h-5" /> Register Your Home
-                </Link>
+                </button>
               </div>
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 sm:gap-6 mt-8 text-white/60 text-sm font-medium">
                 <span className="flex items-center gap-1.5"><CheckCircle className="w-4 h-4 text-ev-green" /> Free to Join</span>
@@ -192,7 +213,7 @@ const Index = () => {
                 <DollarSign className="w-4 h-4" /> Earn with ChargeNest
               </div>
               <h2 className="font-display font-bold text-3xl md:text-4xl lg:text-5xl text-foreground mb-6 leading-tight">
-                Turn your outlet into <br className="hidden lg:block"/> a revenue stream
+                Turn your outlet into <br className="hidden lg:block" /> a revenue stream
               </h2>
               <p className="text-muted-foreground text-lg mb-8 leading-relaxed">
                 Turn your home electricity outlet into a revenue-generating charging point. Set your own prices, choose your availability, and earn money while helping EV riders.
@@ -237,7 +258,7 @@ const Index = () => {
               View All Map <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
-          
+
           {loadingSpots ? (
             <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
               <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
@@ -256,7 +277,7 @@ const Index = () => {
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
               {featuredSpots.map((spot, i) => (
                 <div key={spot.id || i} className="reveal" style={{ transitionDelay: `${i * 0.15}s` }}>
-                  <SpotCard 
+                  <SpotCard
                     id={spot.id}
                     name={spot.name}
                     host={spot.hostName}
@@ -328,10 +349,17 @@ const Index = () => {
       <CTABanner variant="dark" />
 
       {selectedSpot && (
-        <BookingModal 
-          isOpen={!!selectedSpot} 
-          onClose={() => setSelectedSpot(null)} 
-          spot={selectedSpot} 
+        <BookingModal
+          isOpen={!!selectedSpot}
+          onClose={() => setSelectedSpot(null)}
+          spot={selectedSpot}
+        />
+      )}
+
+      {showLoginModal && (
+        <GoogleLoginModal
+          isOpen={showLoginModal}
+          onClose={() => setShowLoginModal(false)}
         />
       )}
     </div>

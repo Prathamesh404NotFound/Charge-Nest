@@ -79,38 +79,38 @@ export interface ChargingSpot {
   updatedAt: Date;
 }
 
-export type SpotCategory = 
-  | 'cafe' 
-  | 'restaurant' 
-  | 'office' 
-  | 'home' 
-  | 'shop' 
-  | 'mall' 
-  | 'hotel' 
-  | 'coworking' 
-  | 'gas_station' 
+export type SpotCategory =
+  | 'cafe'
+  | 'restaurant'
+  | 'office'
+  | 'home'
+  | 'shop'
+  | 'mall'
+  | 'hotel'
+  | 'coworking'
+  | 'gas_station'
   | 'other';
 
-export type OutletType = 
-  | 'standard_3pin' 
-  | '5_amp' 
-  | '16_amp' 
-  | 'type2_ev' 
-  | 'ccs' 
-  | 'tesla' 
+export type OutletType =
+  | 'standard_3pin'
+  | '5_amp'
+  | '16_amp'
+  | 'type2_ev'
+  | 'ccs'
+  | 'tesla'
   | 'usb';
 
-export type ChargingSpeed = 
+export type ChargingSpeed =
   | 'slow' // 2-3 kW
   | 'fast' // 7-22 kW  
   | 'rapid' // 50+ kW
   | 'ultra'; // 150+ kW
 
-export type SpotStatus = 
-  | 'active' 
-  | 'inactive' 
-  | 'pending' 
-  | 'suspended' 
+export type SpotStatus =
+  | 'active'
+  | 'inactive'
+  | 'pending'
+  | 'suspended'
   | 'maintenance';
 
 export interface Amenity {
@@ -161,12 +161,12 @@ export interface ChargingRequest {
   };
 }
 
-export type RequestStatus = 
-  | 'pending' 
-  | 'approved' 
-  | 'rejected' 
-  | 'cancelled' 
-  | 'completed' 
+export type RequestStatus =
+  | 'pending'
+  | 'approved'
+  | 'rejected'
+  | 'cancelled'
+  | 'completed'
   | 'no_show';
 
 export interface Favorite {
@@ -188,13 +188,13 @@ export interface Notification {
   actionUrl?: string;
 }
 
-export type NotificationType = 
-  | 'request_approved' 
-  | 'request_rejected' 
+export type NotificationType =
+  | 'request_approved'
+  | 'request_rejected'
   | 'request_completed'
-  | 'new_review' 
-  | 'spot_nearby' 
-  | 'watts_earned' 
+  | 'new_review'
+  | 'spot_nearby'
+  | 'watts_earned'
   | 'level_up'
   | 'system'
   | 'promotion';
@@ -360,3 +360,81 @@ export interface UserAnalytics {
     watts: number;
   }[];
 }
+
+// Government Charging Stations types
+export interface GovernmentChargingStation {
+  id: string;
+  stationName: string;
+  stationType: string;
+  governmentDepartment: string;
+  address: string;
+  city: string;
+  state: string;
+  pincode: string;
+  coordinates: {
+    lat: number;
+    lng: number;
+  };
+  numberOfChargers: number;
+  chargerTypes: string[];
+  availabilityStatus: 'active' | 'maintenance' | 'inactive' | 'coming_soon';
+  pricing: {
+    pricePerHour: number;
+    pricePerMinute?: number;
+    freeCharging?: boolean;
+  };
+  workingHours: {
+    weekdays: string;
+    weekends: string;
+    holidays?: string;
+  };
+  contact: {
+    phone: string;
+    email?: string;
+    website?: string;
+  };
+  images: string[];
+  logo?: string;
+  description: string;
+  notes?: string;
+  verificationStatus: 'verified' | 'pending' | 'rejected';
+  isFeatured: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  lastVerified?: Date;
+  verifiedBy?: string;
+  amenities: Array<{
+    id: string;
+    name: string;
+    icon: string;
+    available: boolean;
+  }>;
+  technical: {
+    powerRating: string;
+    voltage: string;
+    current: string;
+    connectorTypes: string[];
+  };
+  usage: {
+    totalCharges: number;
+    averageDailyUsage: number;
+    lastMaintenance?: Date;
+    nextMaintenance?: Date;
+  };
+}
+
+export interface ImportResult {
+  success: number;
+  failed: number;
+  skipped: number;
+  errors: Array<{
+    row: number;
+    field: string;
+    message: string;
+    data: any;
+  }>;
+  imported: GovernmentChargingStation[];
+}
+
+export type GovernmentStationStatus = 'active' | 'maintenance' | 'inactive' | 'coming_soon';
+export type GovernmentStationVerificationStatus = 'verified' | 'pending' | 'rejected';

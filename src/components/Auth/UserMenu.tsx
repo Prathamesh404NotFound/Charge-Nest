@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { User, LogOut, Settings, History, DollarSign, ChevronDown } from "lucide-react";
+import { User, LogOut, Settings, History, DollarSign, ChevronDown, Shield } from "lucide-react";
 import { useAuth } from "./AuthProvider";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -15,6 +16,7 @@ import { Link } from "react-router-dom";
 
 export default function UserMenu() {
   const { user, logout } = useAuth();
+  const { isAdmin, isAuthorized } = useAdminAuth();
 
   const handleLogout = async () => {
     try {
@@ -47,9 +49,29 @@ export default function UserMenu() {
             <p className="text-xs leading-none text-muted-foreground">
               {user.email}
             </p>
+            {isAdmin && (
+              <div className="flex items-center gap-1 text-xs text-primary">
+                <Shield className="w-3 h-3" />
+                Administrator
+              </div>
+            )}
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+
+        {/* Admin option - only visible to admin users */}
+        {isAuthorized && (
+          <>
+            <DropdownMenuItem asChild>
+              <Link to="/admin" className="flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                Admin Panel
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
+
         <DropdownMenuItem asChild>
           <Link to="/dashboard" className="flex items-center gap-2">
             <User className="w-4 h-4" />
