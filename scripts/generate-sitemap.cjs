@@ -10,6 +10,10 @@ const path = require('path');
 const BASE_URL = 'https://voltsetu.netlify.app';
 const FIREBASE_DB_URL = 'https://charge-nest-default-rtdb.asia-southeast1.firebasedatabase.app/chargingSpots.json';
 
+// cities.json is a tiny static snapshot (slug + active) kept in sync by the
+// `npm run sync-cities` script whenever src/lib/cities.ts changes. It exists
+// so this Node script doesn't need to parse TypeScript.
+
 const staticPages = [
   { url: '/', priority: '1.0', changefreq: 'daily' },
   { url: '/spots', priority: '0.9', changefreq: 'always' },
@@ -21,9 +25,14 @@ const staticPages = [
 ];
 
 // Generic city landing pages rendered by /city/:slug — always routable.
-const cityPages = ['kolhapur', 'pune', 'mumbai', 'nagpur', 'bangalore', 'hyderabad', 'chennai', 'delhi'].map(
-  (slug) => ({ url: `/city/${slug}`, priority: '0.8', changefreq: 'weekly' })
-);
+// All 50 cities in the registry get a SEO landing page; launch cities get a
+// higher priority than coming-soon ones.
+const cityPages = require('../src/lib/cities.json').map((c) => ({
+  url: `/city/${c.slug}`,
+  priority: c.active ? '0.8' : '0.6',
+  changefreq: 'weekly',
+}));
+const activeCitySlugs = require('../src/lib/cities.json').map((c) => c.slug);
 
 function fetchJson(url, timeoutMs) {
   return new Promise((resolve) => {
@@ -93,7 +102,7 @@ async function generate() {
 
   spots.forEach((spot) => {
     const city = typeof spot.city === 'string' ? spot.city.toLowerCase().trim() : '';
-    const cityUrl = ['', 'kolhapur', 'pune', 'mumbai', 'nagpur', 'bangalore', 'hyderabad', 'chennai', 'delhi'].includes(city) ? `/city/${city}` : '/spots';
+    const cityUrl = activeCitySlugs.includes(city) ? `/city/${city}` : '/spots';
     sitemap += `  <url>
     <loc>${BASE_URL}${cityUrl}</loc>
     <lastmod>${formatDate(spot.updatedAt || spot.createdAt)}</lastmod>

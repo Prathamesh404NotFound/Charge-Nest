@@ -18,7 +18,7 @@ export default function CityPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!city || !city.active) return;
+    if (!city || !city.active) return; // coming-soon cities render without a spot count
     let cancelled = false;
     setLoading(true);
     getAllChargingSpots()
@@ -37,7 +37,7 @@ export default function CityPage() {
     };
   }, [city]);
 
-  if (!city || !city.active) {
+  if (!city) {
     return (
       <div className="pt-24 min-h-screen">
         <SEO
@@ -69,14 +69,17 @@ export default function CityPage() {
               {city.launch && (
                 <span className="px-2 py-0.5 rounded-full bg-ev-green/20 text-xs font-semibold">Launch City</span>
               )}
+              {!city.active && (
+                <span className="px-2 py-0.5 rounded-full bg-white/15 text-white/80 text-xs font-semibold">Coming Soon</span>
+              )}
             </div>
             <h1 className="font-display font-bold text-3xl md:text-5xl text-white leading-tight mb-6">
               EV Charging Spots in{" "}
               <span className="text-ev-green">{city.name}</span>
             </h1>
             <p className="text-lg text-white/70 max-w-xl mb-8 leading-relaxed">
-              Book a verified home charging point near you — starting at Rs 5 per 10 minutes. No
-              queue, no detour, just plug in and charge your two-wheeler anywhere in the city.
+              {city.seo?.sub ??
+                "Book a verified home charging point near you — starting at Rs 5 per 10 minutes. No queue, no detour, just plug in and charge your two-wheeler anywhere in the city."}
             </p>
             <div className="flex flex-wrap gap-4">
               <Button asChild className="px-8 py-4 rounded-xl gradient-green text-white font-semibold text-lg shadow-xl hover:opacity-90 hover:-translate-y-1 transition-all">
@@ -122,8 +125,8 @@ export default function CityPage() {
               </div>
               <h3 className="font-display font-bold text-2xl text-foreground mb-3">Riding an EV in {city.name}?</h3>
               <p className="text-muted-foreground leading-relaxed mb-5">
-                Skip the long detour to public charging stations. Book a verified home outlet near
-                you, check live availability, and charge your two-wheeler in minutes.
+                {city.seo?.why ??
+                  "Skip the long detour to public charging stations. Book a verified home outlet near you, check live availability, and charge your two-wheeler in minutes."}
               </p>
               <Button asChild className="gradient-primary">
                 <Link to="/spots">Find Charging Spots</Link>

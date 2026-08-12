@@ -16,6 +16,7 @@ import SpotCard from "@/components/SpotCard";
 import BookingModal from "@/components/BookingModal";
 import CTABanner from "@/components/CTABanner";
 import DestinationSearch, { type Destination } from "@/components/DestinationSearch";
+import { TripPlannerPanel } from "@/components/TripPlannerPanel";
 import spotsMapImg from "@/assets/spots-map.jpg";
 import { getAllChargingSpots } from "@/lib/hostRegistration";
 import { toast } from "sonner";
@@ -425,11 +426,20 @@ export default function FindSpots() {
                   </h2>
                   <p className="text-sm text-muted-foreground">
                     Find charging spots along your drive using OpenStreetMap search and approximate
-                    driving directions (not two-wheeler specific).
+                    driving directions (not two-wheeler specific). The planner below also works
+                    without location access — just enter start and destination.
                   </p>
                 </div>
 
                 <DestinationSearch value={destination} onChange={setDestination} />
+                <TripPlannerPanel
+                  spots={spotsWithDistance}
+                  onPickSpot={(tripSpot) => {
+                    const match = spotsWithDistance.find((s) => s.id === tripSpot.id);
+                    setSelectedSpot(match ?? tripSpot);
+                    setViewMode("list");
+                  }}
+                />
 
                 <div>
                   <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">

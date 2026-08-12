@@ -8,6 +8,7 @@ import UserMenu from "./Auth/UserMenu";
 import NotificationBell from "./NotificationBell";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useT, useLang } from "@/lib/i18n";
 import { requestNotificationPermission } from "@/lib/browserNotifications";
 import { CITIES, getCityBySlug } from "@/lib/cities";
 import { InstallPwaButton } from "@/components/InstallPwaButton";
@@ -18,21 +19,21 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const navLinks = [
-  { to: "/", label: "Home" },
-  { to: "/spots", label: "Find Spots" },
-  { to: "/host", label: "Become a Host" },
-  { to: "/how-it-works", label: "How It Works" },
-  { to: "/pricing", label: "Pricing" },
-  { to: "/about", label: "About" },
-  { to: "/contact", label: "Contact" },
+const navLinkKeys = [
+  { to: "/", key: "nav.home" },
+  { to: "/spots", key: "nav.findSpots" },
+  { to: "/host", key: "nav.becomeHost" },
+  { to: "/how-it-works", key: "nav.howItWorks" },
+  { to: "/pricing", key: "nav.pricing" },
+  { to: "/about", key: "nav.about" },
+  { to: "/contact", key: "nav.contact" },
 ];
 
 // At lg widths (1024–1279px) the full 7-link nav crowds the header. The
 // secondary links move under a compact "More" dropdown there; all links
 // stay visible inline at xl+.
-const primaryLinks = navLinks.slice(0, 4);
-const secondaryLinks = navLinks.slice(4);
+const primaryLinks = navLinkKeys.slice(0, 4);
+const secondaryLinks = navLinkKeys.slice(4);
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -42,6 +43,8 @@ export default function Navbar() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  const t = useT();
+  const { lang, setLang } = useLang();
 
   // Auto-open the sign-in modal when a deep link arrives with ?signin
   // (e.g. the Roadside Rescue page redirecting unsigned riders).
@@ -127,7 +130,7 @@ export default function Navbar() {
               )}
               aria-current={location.pathname === link.to ? "page" : undefined}
             >
-              {link.label}
+              {t(link.key)}
             </Link>
           ))}
           <DropdownMenu>
@@ -151,7 +154,7 @@ export default function Navbar() {
                       location.pathname === link.to ? "text-primary" : "text-foreground"
                     )}
                   >
-                    {link.label}
+                    {t(link.key)}
                   </Link>
                 </DropdownMenuItem>
               ))}
@@ -169,7 +172,7 @@ export default function Navbar() {
               )}
               aria-current={location.pathname === link.to ? "page" : undefined}
             >
-              {link.label}
+              {t(link.key)}
             </Link>
           ))}
         </nav>
@@ -205,8 +208,8 @@ export default function Navbar() {
                 to="/spots"
                 className="px-2.5 xl:px-4 py-2 rounded-xl bg-primary text-primary-foreground font-semibold text-[11px] xl:text-sm whitespace-nowrap hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5 animate-glow"
               >
-                <span className="hidden xl:inline">Find a Spot</span>
-                <span className="inline xl:hidden">Find Spot</span>
+                <span className="hidden xl:inline">{t("common.findASpot")}</span>
+                <span className="inline xl:hidden">{t("nav.findSpots")}</span>
               </Link>
             </>
           ) : (
@@ -216,13 +219,13 @@ export default function Navbar() {
                 onClick={() => setLoginModalOpen(true)}
                 className="font-semibold text-[11px] xl:text-sm px-1.5 xl:px-3 whitespace-nowrap"
               >
-                Sign In
+                {t("nav.signIn")}
               </Button>
               <Button
                 onClick={() => setLoginModalOpen(true)}
                 className="px-2.5 xl:px-4 py-2 rounded-xl bg-primary text-primary-foreground font-semibold text-[11px] xl:text-sm whitespace-nowrap hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5"
               >
-                Get Started
+                {t("nav.getStarted")}
               </Button>
             </>
           )}
@@ -244,7 +247,19 @@ export default function Navbar() {
       {mobileOpen && (
         <div id="mobile-navigation" className="lg:hidden absolute top-full left-0 right-0 glass border-t border-border animate-slide-down">
           <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-col gap-1">
-            {navLinks.map((link) => (
+            <div className="flex items-center justify-end mb-1">
+              <button
+                type="button"
+                onClick={() => setLang(lang === "hi" ? "en" : "hi")}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border/70 bg-background/80 text-xs font-semibold text-foreground hover:bg-muted transition-colors"
+                aria-label="Toggle language between English and Hindi"
+              >
+                <span className={lang === "en" ? "text-primary" : "text-muted-foreground/70"}>EN</span>
+                <span className="text-muted-foreground/50">|</span>
+                <span className={lang === "hi" ? "text-primary" : "text-muted-foreground/70"}>हिं</span>
+              </button>
+            </div>
+            {navLinkKeys.map((link) => (
               <Link
                 key={link.to}
                 to={link.to}
@@ -255,7 +270,7 @@ export default function Navbar() {
                     : "text-muted-foreground hover:bg-muted"
                 )}
               >
-                {link.label}
+                {t(link.key)}
               </Link>
             ))}
             <div className="px-4 py-2">
@@ -283,7 +298,7 @@ export default function Navbar() {
                   to="/spots"
                   className="flex-1 px-5 py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm text-center"
                 >
-                  Find a Spot
+                  {t("common.findASpot")}
                 </Link>
               </div>
             ) : (
@@ -293,13 +308,13 @@ export default function Navbar() {
                   onClick={() => setLoginModalOpen(true)}
                   className="font-semibold text-sm sm:text-base justify-center"
                 >
-                  Sign In
+                  {t("nav.signIn")}
                 </Button>
                 <Button
                   onClick={() => setLoginModalOpen(true)}
                   className="px-5 py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm"
                 >
-                  Get Started
+                  {t("nav.getStarted")}
                 </Button>
               </div>
             )}

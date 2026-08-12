@@ -103,6 +103,29 @@ export async function getHostSpotStats(spot: HostSpot): Promise<SpotStats> {
   };
 }
 
+/** 7-day daily completed-session trend for one host spot (date labels + counts). */
+export function getSpotSessionTrend(requests: HostBookingRequest[], days = 7): {
+  labels: string[];
+  completed: number[];
+} {
+  const labels: string[] = [];
+  const completed: number[] = [];
+  const now = new Date();
+  const dayMs = 86400000;
+  for (let i = days - 1; i >= 0; i--) {
+    const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    dayStart.setTime(dayStart.getTime() - i * dayMs);
+    const dayEnd = dayStart.getTime() + dayMs;
+    const count = requests.filter((r) => {
+      const at = typeof r.requestedAt === "number" ? r.requestedAt : 0;
+      return r.status === "completed" && at >= dayStart.getTime() && at < dayEnd;
+    }).length;
+    labels.push(dayStart.toLocaleDateString("en-IN", { weekday: "short" }));
+    completed.push(count);
+  }
+  return { labels, completed };
+}
+
 /** Host actions on incoming booking requests for their spots. */
 export async function hostRespondToRequest(
   spotId: string, requestId: string, userId: string,

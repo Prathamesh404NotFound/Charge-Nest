@@ -13,6 +13,7 @@ import AdminRoute from "@/components/Admin/AdminRoute";
 import AuthenticatedRoute from "@/components/AuthenticatedRoute";
 import AdminLayoutPage from "@/components/Admin/AdminLayoutPage";
 import { AuthProvider, useAuth } from "@/components/Auth/AuthProvider";
+import { LanguageProvider } from "@/lib/i18n";
 import { LazyPage } from "@/components/LazyPage";
 import NotFound from "./pages/NotFound";
 import '@/styles/responsive.css';
@@ -168,6 +169,7 @@ function AppContent() {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
+    <LanguageProvider>
     <AuthProvider>
       <TooltipProvider>
         <Toaster />
@@ -180,6 +182,7 @@ const App = () => (
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>
+    </LanguageProvider>
   </QueryClientProvider>
 );
 

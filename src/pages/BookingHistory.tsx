@@ -10,6 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getUserBookings, cancelBooking, BookingRequest } from "@/lib/bookingService";
 import ChatPanel from "@/components/ChatPanel";
+import RateRiderModal from "@/components/RateRiderModal";
+import { getUserProfile } from "@/lib/userService";
+import { Star } from "lucide-react";
 import { toast } from "sonner";
 import GoogleLoginModal from "@/components/Auth/GoogleLoginModal";
 import SEO from "@/components/SEO";
@@ -32,11 +35,16 @@ export default function BookingHistory() {
   const [filter, setFilter] = useState("All");
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [showLogin, setShowLogin] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [ratingTarget, setRatingTarget] = useState<BookingRequest | null>(null);
 
   useEffect(() => {
     if (!user) { setLoading(false); return; }
-    getUserBookings(user.id)
-      .then(setBookings)
+    Promise.all([getUserBookings(user.id), getUserProfile(user.id).catch(() => null)])
+      .then(([b, p]) => {
+        setBookings(b);
+        setUserRole(p?.role ?? null);
+      })
       .catch(() => toast.error("Failed to load booking history"))
       .finally(() => setLoading(false));
   }, [user]);
@@ -217,6 +225,16 @@ export default function BookingHistory() {
                           </div>
                         )}
 
+                        {/* Host rates rider after completed booking (two-way ratings) */}
+                        {booking.status === "completed" && userRole === "host" && (
+                          <div className="mt-3 flex justify-end">
+                            <Button size="sm" variant="outline" className="gap-1.5 text-primary"
+                              onClick={() => setRatingTarget(booking)}>
+                              <Star className="w-3.5 h-3.5" />Rate Rider
+                            </Button>
+                          </div>
+                        )}
+
                         {/* In-app rider–host chat (active bookings only) */}
                         {booking.status !== "cancelled" && booking.status !== "rejected" && (
                           <div className="mt-3 border-t border-border pt-3">
@@ -238,6 +256,15 @@ export default function BookingHistory() {
           </div>
         )}
       </div>
+
+      <RateRiderModal
+        isOpen={ratingTarget !== null}
+        onClose={() => setRatingTarget(null)}
+        booking={ratingTarget ?? { id: "" }}
+        hostUid={user?.id ?? ""}
+        riderUid={ratingTarget?.userId ?? ""}
+        riderName={ratingTarget?.userName}
+      />
     </div>
   );
 }

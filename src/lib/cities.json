@@ -1,0 +1,210 @@
+[
+ {
+  "slug": "kolhapur",
+  "active": true
+ },
+ {
+  "slug": "pune",
+  "active": false
+ },
+ {
+  "slug": "mumbai",
+  "active": false
+ },
+ {
+  "slug": "nagpur",
+  "active": false
+ },
+ {
+  "slug": "bangalore",
+  "active": false
+ },
+ {
+  "slug": "hyderabad",
+  "active": false
+ },
+ {
+  "slug": "chennai",
+  "active": false
+ },
+ {
+  "slug": "delhi",
+  "active": false
+ },
+ {
+  "slug": "ahmedabad",
+  "active": false
+ },
+ {
+  "slug": "jaipur",
+  "active": false
+ },
+ {
+  "slug": "lucknow",
+  "active": false
+ },
+ {
+  "slug": "kolkata",
+  "active": false
+ },
+ {
+  "slug": "bhopal",
+  "active": false
+ },
+ {
+  "slug": "indore",
+  "active": false
+ },
+ {
+  "slug": "nashik",
+  "active": false
+ },
+ {
+  "slug": "vadodara",
+  "active": false
+ },
+ {
+  "slug": "surat",
+  "active": false
+ },
+ {
+  "slug": "coimbatore",
+  "active": false
+ },
+ {
+  "slug": "kochi",
+  "active": false
+ },
+ {
+  "slug": "thiruvananthapuram",
+  "active": false
+ },
+ {
+  "slug": "visakhapatnam",
+  "active": false
+ },
+ {
+  "slug": "vijayawada",
+  "active": false
+ },
+ {
+  "slug": "mysore",
+  "active": false
+ },
+ {
+  "slug": "chandigarh",
+  "active": false
+ },
+ {
+  "slug": "ludhiana",
+  "active": false
+ },
+ {
+  "slug": "amritsar",
+  "active": false
+ },
+ {
+  "slug": "agra",
+  "active": false
+ },
+ {
+  "slug": "varanasi",
+  "active": false
+ },
+ {
+  "slug": "patna",
+  "active": false
+ },
+ {
+  "slug": "guwahati",
+  "active": false
+ },
+ {
+  "slug": "bhubaneswar",
+  "active": false
+ },
+ {
+  "slug": "raipur",
+  "active": false
+ },
+ {
+  "slug": "ranchi",
+  "active": false
+ },
+ {
+  "slug": "dehradun",
+  "active": false
+ },
+ {
+  "slug": "kanpur",
+  "active": false
+ },
+ {
+  "slug": "meerut",
+  "active": false
+ },
+ {
+  "slug": "aurangabad",
+  "active": false
+ },
+ {
+  "slug": "solapur",
+  "active": false
+ },
+ {
+  "slug": "hubli",
+  "active": false
+ },
+ {
+  "slug": "mangalore",
+  "active": false
+ },
+ {
+  "slug": "madurai",
+  "active": false
+ },
+ {
+  "slug": "tiruchirappalli",
+  "active": false
+ },
+ {
+  "slug": "noida",
+  "active": false
+ },
+ {
+  "slug": "gurugram",
+  "active": false
+ },
+ {
+  "slug": "faridabad",
+  "active": false
+ },
+ {
+  "slug": "ghaziabad",
+  "active": false
+ },
+ {
+  "slug": "mathura",
+  "active": false
+ },
+ {
+  "slug": "tirupati",
+  "active": false
+ },
+ {
+  "slug": "salem",
+  "active": false
+ },
+ {
+  "slug": "belgaum",
+  "active": false
+ },
+ {
+  "slug": "gwalior",
+  "active": false
+ },
+ {
+  "slug": "jabalpur",
+  "active": false
+ }
+]

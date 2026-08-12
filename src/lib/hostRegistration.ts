@@ -21,6 +21,8 @@ interface HostRegistrationData {
   status: "pending" | "approved" | "rejected";
   createdAt: any;
   googleMapsLink?: string;
+  spotType?: string;
+  referralCode?: string;
   facilities?: string[];
 }
 
@@ -39,6 +41,8 @@ export interface HostRegistrationInput {
   coordinates: { lat: number; lng: number } | null;
   agreeToTerms: boolean;
   googleMapsLink?: string;
+  spotType?: string;
+  referralCode?: string;
   facilities?: string[];
 }
 
@@ -69,6 +73,8 @@ export async function submitHostRegistration(data: HostRegistrationInput) {
     status: "pending",
     createdAt: serverTimestamp(),
     googleMapsLink: data.googleMapsLink || "",
+    spotType: data.spotType || "Home",
+    referralCode: data.referralCode || "",
     facilities: Array.isArray(data.facilities) ? sanitizeFacilityIds(data.facilities) : [],
   };
 
@@ -77,6 +83,32 @@ export async function submitHostRegistration(data: HostRegistrationInput) {
   const userRegistrationsRef = ref(database, `hostRegistrations/${user.uid}`);
   const newRegistrationRef = push(userRegistrationsRef);
   await set(newRegistrationRef, sanitizeForDb(registrationData));
+
+  // Auto-route the new submission into the admin listing review queue so
+  // nothing goes live without admin approval (creates a spot pending review).
+  try {
+    const { createListingReview } = await import("./spotReviewService");
+    const reviewSpotId = `reg-${newRegistrationRef.key}`;
+    await createListingReview(reviewSpotId, sanitizeForDb({
+      registrationId: newRegistrationRef.key,
+      hostId: user.uid,
+      hostName: registrationData.fullName,
+      hostEmail: registrationData.email,
+      hostPhone: registrationData.phone,
+      name: `${registrationData.fullName}'s Charging Spot`,
+      address: registrationData.address,
+      city: registrationData.city,
+      state: registrationData.state,
+      outletType: registrationData.outletType,
+      pricePerHour: Number.parseFloat(registrationData.pricePerHour) || 0,
+      facilities: registrationData.facilities,
+      referralCode: registrationData.referralCode,
+      coordinates: coordinates,
+      googleMapsLink: registrationData.googleMapsLink || "",
+    }));
+  } catch (error) {
+    console.warn("Review queue routing failed (non-fatal):", error);
+  }
 
   // Listings are created only after an administrator reviews the registration.
   // Never self-promote the account or publish an unverified spot from the client.
@@ -205,6 +237,9 @@ export async function updateRegistrationStatus(
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
           googleMapsLink: registration.googleMapsLink || "",
+          spotType: registration.spotType || "Home",
+          category: registration.spotType === "Home" ? "home" : "commercial",
+          referralCode: registration.referralCode || "",
         }));
       }
 

@@ -134,6 +134,51 @@
           ".validate": "newData.child('userId').val() === $uid"
         }
       }
+    },
+    "spotWaitlist": {
+      "$spotId": {
+        ".read": true,
+        "$waitId": {
+          ".read": true,
+          ".write": "auth != null && (root.child('chargingSpots').child($spotId).child('hostId').val() === auth.uid || root.child('admins').child(auth.uid).exists())",
+          ".validate": "newData.hasChildren(['userId', 'joinedAt']) && newData.child('userId').val() === auth.uid"
+        }
+      }
+    },
+    "spotLiveStatus": {
+      "$spotId": {
+        ".read": true,
+        "$hostId": {
+          ".read": true,
+          ".write": "auth != null && (auth.uid === $hostId || root.child('admins').child(auth.uid).exists())"
+        }
+      }
+    },
+    "hostSettings": {
+      "$hostId": {
+        ".read": "auth != null && (auth.uid === $hostId || root.child('admins').child(auth.uid).exists())",
+        ".write": "auth != null && (auth.uid === $hostId || root.child('admins').child(auth.uid).exists())"
+      }
+    },
+    "referralCodes": {
+      "$hostId": {
+        ".read": "auth != null && (auth.uid === $hostId || root.child('admins').child(auth.uid).exists())",
+        ".write": "auth != null && root.child('admins').child(auth.uid).exists()"
+      }
+    },
+    "referralClaims": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
+      ".write": false
+    },
+    "riderRatings": {
+      "$riderId": {
+        ".read": "auth != null",
+        "$ratingId": {
+          ".read": "auth != null",
+          ".write": "auth != null && auth.uid === newData.child('hostId').val() && !data.exists()",
+          ".validate": "newData.hasChildren(['hostId', 'rating', 'ratedAt']) && newData.child('rating').val() >= 1 && newData.child('rating').val() <= 5 && newData.child('hostId').val() === auth.uid"
+        }
+      }
     }
   }
 }

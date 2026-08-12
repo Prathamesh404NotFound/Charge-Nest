@@ -3,7 +3,7 @@ import {
   X, ArrowLeft, ArrowRight, Home, MapPin, Zap, DollarSign,
   Check, Phone, Mail, User, Navigation, Loader2, CheckCircle2,
   FileText, AlertTriangle, Search, Locate, Copy, ExternalLink,
-  ShieldCheck, Trash2, Plus, Eye,
+  ShieldCheck, Trash2, Plus, Eye, Gift,
 } from "lucide-react";
 import { useAuth } from "../Auth/AuthProvider";
 import { Button } from "@/components/ui/button";
@@ -55,6 +55,7 @@ interface FormData {
   coordSource: "address" | "gps" | null;
   googleMapsLink: string;
   // Step 3 – Charging
+  spotType: string;
   outletType: string;
   chargingSpeed: string;
   availableHours: string;
@@ -64,6 +65,7 @@ interface FormData {
   documents: WizardDoc[];
   // Step 5 – Confirm
   agreeToTerms: boolean;
+  referralCode: string;
 }
 
 interface NominatimResult {
@@ -111,6 +113,7 @@ const defaultFormData = (user: any): FormData => ({
   gpsCoords: null,
   coordSource: null,
   googleMapsLink: "",
+  spotType: "",
   outletType: "",
   chargingSpeed: "",
   availableHours: "",
@@ -118,6 +121,7 @@ const defaultFormData = (user: any): FormData => ({
   facilities: [],
   documents: [],
   agreeToTerms: false,
+  referralCode: "",
 });
 
 const STEPS = [
@@ -521,6 +525,7 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
         city:           form.city,
         state:          form.state,
         pincode:        form.pincode,
+        spotType:       form.spotType,
         outletType:     form.outletType,
         chargingSpeed:  form.chargingSpeed,
         availableHours: form.availableHours,
@@ -529,6 +534,7 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
         agreeToTerms:   form.agreeToTerms,
         googleMapsLink: form.googleMapsLink || "",
         facilities:     sanitizeFacilityIds(form.facilities),
+        referralCode:   form.referralCode?.trim() || "",
       });
       registrationId = regResult.registrationId;
 
@@ -927,6 +933,21 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
             </div>
             <div className="space-y-4">
               <div>
+                <label className="block text-sm font-medium mb-2">Spot Type</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {["Home", "Shop", "Café / Restaurant", "Office", "Parking / Garage"].map(type => (
+                    <button key={type} onClick={() => update("spotType", type)}
+                      className={`p-3 rounded-xl border-2 transition-all text-sm font-medium ${
+                        form.spotType === type
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border hover:border-primary/50 text-foreground"
+                      }`}>
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
                 <label className="block text-sm font-medium mb-2">Outlet Type</label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {["Standard 3-Pin", "5-Amp Socket", "16-Amp Socket", "Type 2 EV Charger"].map(type => (
@@ -1202,6 +1223,19 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
                   </ul>
                 </div>
               )}
+              <div className="pt-3 border-t border-border/60">
+                <label className="text-muted-foreground text-xs uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
+                  <Gift className="w-3.5 h-3.5 text-ev-green" /> Host referral code (optional)
+                </label>
+                <input
+                  type="text"
+                  value={form.referralCode}
+                  onChange={(e) => update("referralCode", e.target.value.toUpperCase().slice(0, 20))}
+                  placeholder="e.g. VS-1A2B3C4D-9X — the code of a host who invited you"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">Your referrer gets ₹50 credit when your listing is approved.</p>
+              </div>
               {form.googleMapsLink && (
                 <div className="pt-3 border-t border-border/60">
                   <p className="text-muted-foreground text-xs uppercase tracking-wide mb-1">Google Maps link</p>

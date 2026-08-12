@@ -26,6 +26,9 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/components/Auth/AuthProvider";
 import { cn } from "@/lib/utils";
 import { useIsMobile, useIsDesktop } from "@/hooks/use-mobile";
+import { subscribeLiveStatus, type LiveStatus } from "@/lib/liveStatusService";
+import { joinWaitlist, leaveMyWaitlist } from "@/lib/waitlistService";
+import { useT } from "@/lib/i18n";
 import StepIndicator from "@/components/StepIndicator";
 import { ReviewsSection } from "@/components/ReviewsSection";
 import FacilitiesChips from "@/components/FacilitiesChips";
@@ -119,6 +122,7 @@ interface BookingModalProps {
   spot: {
     id?: string;
     name: string;
+    hostId?: string;
     hostName: string;
     hostPhone?: string;
     pricePerHour: number;
@@ -239,6 +243,16 @@ export default function BookingModal({ isOpen, onClose, spot }: BookingModalProp
   const isDesktop = useIsDesktop();
   const scrollRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
+  const t = useT();
+  const [liveStatus, setLiveStatus] = useState<LiveStatus | null>(null);
+  const [onWaitlist, setOnWaitlist] = useState(false);
+  const [myWaitId, setMyWaitId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen || !spot.id) return;
+    const unsub = subscribeLiveStatus(spot.id, (st) => setLiveStatus(st));
+    return unsub;
+  }, [isOpen, spot.id]);
 
   const [currentStep, setCurrentStep] = useState(1);
   const [stepValidationError, setStepValidationError] = useState("");
@@ -254,6 +268,28 @@ export default function BookingModal({ isOpen, onClose, spot }: BookingModalProp
   const [depositStatus, setDepositStatus] = useState<"idle" | "paying" | "paid" | "failed">("idle");
   const [depositError, setDepositError] = useState<string>("");
   const [depositOrderRef, setDepositOrderRef] = useState<{ orderId: string; session: string } | null>(null);
+
+  const handleJoinWaitlist = async () => {
+    if (!user || !spot.id) return;
+    const result = await joinWaitlist(spot.id, user.uid, user.displayName ?? "Rider", "");
+    if (result.ok && result.waitId) {
+      setOnWaitlist(true);
+      setMyWaitId(result.waitId);
+      toast.success(result.message);
+    } else if (result.ok) {
+      toast.success(result.message);
+    } else {
+      toast.error(result.message);
+    }
+  };
+
+  const handleLeaveWaitlist = async () => {
+    if (!spot.id || !user) return;
+    await leaveMyWaitlist(spot.id, user.uid);
+    setOnWaitlist(false);
+    setMyWaitId(null);
+    toast.success(t("spot.leaveWaitlist"));
+  };
 
   const activeDuration = duration === 0 ? customMinutes : duration;
   const estimatedCost = Math.round((spot.pricePerHour / 60) * activeDuration);
@@ -736,6 +772,31 @@ export default function BookingModal({ isOpen, onClose, spot }: BookingModalProp
                   <span className="text-xs font-normal text-muted-foreground">/hr</span>
                 </div>
               </div>
+
+              {/* Live status banner: spot currently occupied → offer waitlist instead of booking */}
+              {liveStatus !== null && !liveStatus.available && (
+                <div
+                  className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-center"
+                  data-testid="booking-waitlist-banner"
+                >
+                  <p className="text-sm font-semibold text-foreground mb-1">{t("booking.busy")}</p>
+                  <p className="text-xs text-muted-foreground mb-3">{t("booking.waitlistPrompt")}</p>
+                  {!onWaitlist ? (
+                    <Button
+                      size="sm"
+                      className="bg-amber-500 text-white hover:bg-amber-600"
+                      disabled={!user}
+                      onClick={handleJoinWaitlist}
+                    >
+                      <Users className="w-4 h-4" /> {user ? t("booking.joinWaitlist") : t("booking.signInToWaitlist")}
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="outline" onClick={handleLeaveWaitlist}>
+                      {t("booking.leaveWaitlist")}
+                    </Button>
+                  )}
+                </div>
+              )}
 
               {availableAmenities.length > 0 && (
                 <div>

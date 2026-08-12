@@ -13,6 +13,14 @@ import {
   subscribeToSpotAvailability,
   SpotAvailability,
 } from "@/lib/availabilityService";
+import {
+  subscribeLiveStatus,
+  type LiveStatus,
+} from "@/lib/liveStatusService";
+import { subscribeWaitingCount } from "@/lib/waitlistService";
+import { pricePerKmRs, sessionCostRs } from "@/lib/rideCostService";
+import { useT } from "@/lib/i18n";
+import { Users } from "lucide-react";
 
 interface SpotCardProps {
   id?: string;
@@ -32,6 +40,10 @@ interface SpotCardProps {
   amenities?: Array<{ id?: string; icon?: string; name?: string }>;
   suggestedStop?: boolean;
   onBook?: () => void;
+  /** Live toggle overlay: host's "outlet available now" status. */
+  showLiveStatus?: boolean;
+  /** ₹/km cost line shown under the price. */
+  showCostPerKm?: boolean;
 }
 
 const MAX_VISIBLE_BADGES = 2;
@@ -72,7 +84,9 @@ const overlayBadgeClass =
 
 export default function SpotCard({
   id, name, host, hostPhone, distance, pricePerHour, rating, reviews,
-  isOpen, isVerified, isFeatured, image, outletType, availableHours, amenities, suggestedStop, onBook
+  isOpen, isVerified, isFeatured, image, outletType, availableHours, amenities, suggestedStop, onBook,
+  showLiveStatus = true,
+  showCostPerKm = true,
 }: SpotCardProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -82,6 +96,9 @@ export default function SpotCard({
   );
   const [imgError, setImgError] = useState(false);
   const [spotReviews, setSpotReviews] = useState<Review[]>([]);
+  const t = useT();
+  const [liveStatus, setLiveStatus] = useState<LiveStatus | null>(null);
+  const [waitlistCount, setWaitlistCount] = useState(0);
 
   useEffect(() => {
     if (!id) return;
@@ -106,6 +123,16 @@ export default function SpotCard({
     });
     return unsub;
   }, [id]);
+
+  useEffect(() => {
+    if (!id || !showLiveStatus) return;
+    const unsubStatus = subscribeLiveStatus(id, (st) => setLiveStatus(st));
+    const unsubWait = subscribeWaitingCount(id, (count) => setWaitlistCount(count));
+    return () => {
+      unsubStatus();
+      unsubWait();
+    };
+  }, [id, showLiveStatus]);
 
   useEffect(() => {
     setImgError(false);
@@ -211,8 +238,32 @@ export default function SpotCard({
       });
     }
 
+    // Live host toggle: "Outlet available now" beats the schedule-derived badge.
+    if (liveStatus !== null) {
+      badges.push({
+        key: "live",
+        node: (
+          <span className={cn(overlayBadgeClass, liveStatus.available ? "bg-ev-green/90" : "bg-rose-600/90")}>
+            <span className={cn("w-1.5 h-1.5 rounded-full bg-white/90", liveStatus.available ? "animate-pulse" : "")} />
+            {liveStatus.available ? t("spot.available") : t("spot.occupied")}
+          </span>
+        ),
+      });
+    }
+
+    if (liveStatus !== null && !liveStatus.available && waitlistCount > 0) {
+      badges.push({
+        key: "waitlist",
+        node: (
+          <span className={cn(overlayBadgeClass, "bg-amber-500/90")}>
+            <Users className="w-3 h-3" /> {waitlistCount} {t("spot.waitlist").toLowerCase().includes("join") ? "waiting" : "on waitlist"}
+          </span>
+        ),
+      });
+    }
+
     return badges;
-  }, [isFeatured, suggestedStop, isVerified, availability, isOpen, isNew, outletType]);
+  }, [isFeatured, suggestedStop, isVerified, availability, isOpen, isNew, outletType, liveStatus, waitlistCount, t]);
 
   const handleBookNow = () => {
     if (!user) {
@@ -323,6 +374,16 @@ export default function SpotCard({
             <span className="text-sm font-medium text-muted-foreground">/hr</span>
           </div>
           <p className="text-[11px] text-muted-foreground mt-0.5">Pay at spot</p>
+          {showCostPerKm && (() => {
+            const perKm = pricePerKmRs(pricePerHour);
+            const session = sessionCostRs(pricePerHour);
+            if (perKm === null) return null;
+            return (
+              <p className="text-[11px] font-medium text-ev-green mt-1">
+                ₹{perKm.toFixed(2)}{t("spot.perKm")} · ₹{session.toFixed(2)}/10 {t("spot.minutes")}
+              </p>
+            );
+          })()}
         </div>
 
         <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-sm text-muted-foreground mb-5 mt-auto">

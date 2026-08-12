@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { User, MapPin, Clock, DollarSign, Zap, TrendingUp, History, Settings, Car, Heart } from "lucide-react";
+import { User, MapPin, Clock, DollarSign, Zap, TrendingUp, History, Settings, Car, Heart, Copy, Pause, Play, Share2 } from "lucide-react";
 import { useAuth } from "@/components/Auth/AuthProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,11 +7,18 @@ import { Link } from "react-router-dom";
 import SpotCard from "@/components/SpotCard";
 import HostRegistrationModal from "@/components/HostRegistration/HostRegistrationModal";
 import { getUserProfile, UserProfile } from "@/lib/userService";
-import { getUserBookings, BookingRequest } from "@/lib/bookingService";
+import { getUserBookings, type BookingRequest } from "@/lib/bookingService";
+import { setLiveStatus, getLiveStatus, subscribeLiveStatus } from "@/lib/liveStatusService";
+import { getHostSettings, setListingPaused, isHostPaused } from "@/lib/hostSettingsService";
+import { getReferralStats, ensureReferralCode } from "@/lib/referralService";
+import { getSpotSessionTrend, getHostSpotStats } from "@/lib/hostDashboardService";
 import { Loader2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { getHostSpots } from "@/lib/hostRegistration";
+import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import { get, ref } from "firebase/database";
+import { database } from "@/lib/firebase-services";
 import { 
   setSpotOccupied, 
   subscribeToAllAvailability, 
@@ -28,6 +35,11 @@ export default function Dashboard() {
   const [hostSpots, setHostSpots] = useState<any[]>([]);
   const [availabilities, setAvailabilities] = useState<Record<string, SpotAvailability>>({});
   const [loading, setLoading] = useState(true);
+  // Host feature state
+  const [liveStatuses, setLiveStatuses] = useState<Record<string, boolean>>({});
+  const [hostSettings, setHostSettings] = useState<HostSettings | null>(null);
+  const [referral, setReferral] = useState<ReferralStats | null>(null);
+  const [trendData, setTrendData] = useState<{ labels: string[]; completed: number[] } | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -44,6 +56,44 @@ export default function Dashboard() {
     });
   }, [user]);
 
+  // Host features: live status subscription, settings, referral stats, session trend
+  const isHost = profile?.role === "host" || profile?.role === "admin";
+  useEffect(() => {
+    if (!user || !isHost || hostSpots.length === 0) return;
+    const subs: (() => void)[] = [];
+    hostSpots.forEach((spot) => {
+      subs.push(subscribeLiveStatus(spot.id, (s) => {
+        setLiveStatuses((prev) => ({ ...prev, [spot.id]: s.available }));
+      }));
+    });
+    return () => subs.forEach((u) => u());
+  }, [user, isHost, hostSpots.length]);
+
+  useEffect(() => {
+    if (!user || !isHost) return;
+    Promise.all([
+      getHostSettings(user.id),
+      ensureReferralCode(user.id, profile?.displayName || user.displayName || "VoltSetu Host"),
+    ]).then(([settings]) => {
+      setHostSettings(settings);
+      getReferralStats(user.id).then(setReferral);
+    });
+  }, [user, isHost]);
+
+  useEffect(() => {
+    if (!user || !isHost || hostSpots.length === 0) return;
+    const requestsPromises = hostSpots.map((spot) =>
+      get(ref(database, `spotRequests/${spot.id}`)).catch(() => ({ exists: () => false, val: () => null }))
+    );
+    Promise.all(requestsPromises).then((snaps) => {
+      const allRequests = snaps.flatMap((snap: any) => {
+        if (!snap.exists()) return [];
+        return Object.entries(snap.val() as any).map(([id, r]: any) => ({ id, ...r }));
+      });
+      setTrendData(getSpotSessionTrend(allRequests));
+    });
+  }, [user, isHost, hostSpots.length]);
+
   useEffect(() => {
     const unsub = subscribeToAllAvailability((map) => {
       setAvailabilities(map);
@@ -57,6 +107,42 @@ export default function Dashboard() {
       toast.success(`Spot marked as ${!current ? "occupied" : "free"}`);
     } catch (err: any) {
       toast.error(err.message || "Failed to update status");
+    }
+  };
+
+  const handleToggleLive = async (spotId: string, current: boolean) => {
+    if (!user) return;
+    try {
+      await setLiveStatus(spotId, user.id, !current);
+      setLiveStatuses((prev) => ({ ...prev, [spotId]: !current }));
+      toast.success(!current ? "Your spot is now showing Available now" : "Your spot is now showing Occupied");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update live status");
+    }
+  };
+
+  const handlePauseListing = async (paused: boolean, pause24h: boolean) => {
+    if (!user) return;
+    try {
+      await setListingPaused(
+        user.id,
+        paused,
+        paused && pause24h ? new Date(Date.now() + 24 * 3600000).toISOString() : null
+      );
+      setHostSettings((prev) => (prev ? { ...prev, listingPaused: paused } : prev));
+      toast.success(paused ? "Listing paused — riders see you're away" : "Listing is live again");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update listing status");
+    }
+  };
+
+  const handleCopyReferralCode = async () => {
+    if (!referral) return;
+    try {
+      await navigator.clipboard.writeText(referral.code);
+      toast.success("Referral code copied");
+    } catch {
+      toast.error("Copy failed — long-press the code to select it");
     }
   };
 
@@ -271,13 +357,111 @@ export default function Dashboard() {
                             />
                           </div>
                         </div>
+                        <div className="flex items-center justify-between border-t border-border pt-3">
+                          <div>
+                            <p className="text-[11px] font-medium text-foreground">Available now</p>
+                            <p className="text-[10px] text-muted-foreground">Riders see a live dot on your spot</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full ${liveStatuses[spot.id] !== false ? "bg-ev-green animate-pulse" : "bg-red-500"}`} />
+                            <Switch
+                              checked={liveStatuses[spot.id] !== false}
+                              onCheckedChange={() => handleToggleLive(spot.id, liveStatuses[spot.id] !== false)}
+                            />
+                          </div>
+                        </div>
                       </div>
                     );
                   })
                 )}
               </CardContent>
             </Card>
+
+            {/* Listing pause control */}
+            <Card className="flex flex-col rounded-2xl hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  {hostSettings?.listingPaused ? <Pause className="w-4 h-4 text-amber-500" /> : <Play className="w-4 h-4 text-ev-green" />}
+                  Listing Status
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">{hostSettings?.listingPaused ? "Listing paused" : "Listing live"}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {hostSettings?.listingPaused
+                        ? "Riders can't book until you unpause"
+                        : "Pause when you're away on holiday or busy"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        checked={!!hostSettings?.pausedUntil}
+                        onChange={(e) => handlePauseListing(true, e.target.checked)}
+                        className="accent-primary"
+                      />
+                      Auto-unpause in 24h
+                    </label>
+                    <Switch
+                      checked={!hostSettings?.listingPaused}
+                      onCheckedChange={(v) => handlePauseListing(!v, !!hostSettings?.pausedUntil)}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Referral rewards */}
+            {referral && (
+              <Card className="overflow-hidden relative bg-gradient-to-br from-ev-green/10 to-primary/10 border-none rounded-2xl hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
+                <CardContent className="p-6">
+                  <h3 className="font-display font-bold text-lg mb-1 flex items-center gap-2">
+                    <Share2 className="w-4 h-4 text-ev-green" /> Invite hosts, earn ₹50 each
+                  </h3>
+                  <p className="text-xs text-muted-foreground mb-4">
+                    When a host you invite gets approved, ₹50 credit lands in your account. You've referred <span className="font-bold">{referral.referredCount}</span> hosts (₹{referral.credits} earned).
+                  </p>
+                  <div className="flex items-center gap-2 rounded-xl bg-background border border-border px-3 py-2">
+                    <code className="font-mono text-sm font-bold text-primary flex-1 overflow-x-auto">{referral.code}</code>
+                    <Button variant="ghost" size="sm" onClick={handleCopyReferralCode} className="shrink-0 gap-1.5">
+                      <Copy className="w-3.5 h-3.5" /> Copy
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
+        )}
+
+        {/* 7-day session trend (hosts) / engagement (riders) */}
+        {isHost && hostSpots.length > 0 && (
+          <Card className="rounded-2xl hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-primary" /> Sessions — last 7 days
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {trendData ? (
+                <div className="h-44">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={trendData.labels.map((l, i) => ({ day: l, sessions: trendData.completed[i] }))}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                      <XAxis dataKey="day" tick={{ fontSize: 11 }} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={24} />
+                      <Tooltip formatter={(v: any) => [`${v} sessions`, "Sessions"]} />
+                      <Line type="monotone" dataKey="sessions" stroke="#22c55e" strokeWidth={2} dot={{ r: 3 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">No sessions recorded yet — completed bookings will chart here.</p>
+              )}
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>
