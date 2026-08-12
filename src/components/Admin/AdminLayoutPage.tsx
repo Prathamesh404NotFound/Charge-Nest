@@ -21,7 +21,8 @@ import {
   Search,
   Wallet,
   ShieldCheck,
-  ClipboardList
+  ClipboardList,
+  Ticket
 } from 'lucide-react';
 import { useAuth } from '@/components/Auth/AuthProvider';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -88,6 +89,12 @@ const adminNavigation = [
     href: '/admin/verifications',
     icon: ShieldCheck,
     description: 'Review host documents & grant trust'
+  },
+  {
+    title: 'Referrals',
+    href: '/admin/referrals',
+    icon: Ticket,
+    description: 'Audit host referral program'
   },
   {
     title: 'System Settings',

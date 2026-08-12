@@ -46,6 +46,8 @@ const lazyAdminPayouts = () => import("./pages/Admin/AdminPayoutsPage");
 const lazyAdminVerifications = () => import("./pages/Admin/AdminVerificationsPage");
 const lazyAdminListingReviews = () => import("./pages/Admin/AdminListingReviewsPage");
 const lazyAdminGovStations = () => import("./pages/Admin/AdminGovernmentStationsPage");
+const lazyReferralAdmin = () => import("./pages/admin/ReferralAdmin");
+const lazyLoyalty = () => import("./pages/Loyalty");
 
 const queryClient = new QueryClient();
 
@@ -135,6 +137,13 @@ function AppContent() {
             </main>
           </AuthenticatedRoute>
         } />
+        <Route path="/loyalty" element={
+          <AuthenticatedRoute>
+            <main className="min-h-screen pt-24 responsive-container container-lg">
+              <LazyPage load={lazyLoyalty} />
+            </main>
+          </AuthenticatedRoute>
+        } />
 
         {/* Admin Routes */}
         <Route path="/admin" element={
@@ -151,6 +160,7 @@ function AppContent() {
           <Route path="payouts" element={<LazyPage load={lazyAdminPayouts} />} />
           <Route path="verifications" element={<LazyPage load={lazyAdminVerifications} />} />
           <Route path="listing-reviews" element={<LazyPage load={lazyAdminListingReviews} />} />
+          <Route path="referrals" element={<LazyPage load={lazyReferralAdmin} />} />
           <Route path="settings" element={<LazyPage load={lazyAdminDashboard} />} />
         </Route>
 

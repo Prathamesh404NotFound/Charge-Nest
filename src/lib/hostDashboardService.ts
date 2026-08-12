@@ -39,6 +39,23 @@ export interface HostBookingRequest {
   emergency?: boolean;
   depositStatus?: string;
   depositAmount?: number;
+  userId?: string;
+  riderReputation?: { average: number; count: number };
+}
+
+/** Load rider reputation (avg + count from riderRatings) into a booking request.
+ * Read-only derivation — never stored, cannot be gamed by riders. */
+export async function enrichRiderReputation(
+  request: HostBookingRequest
+): Promise<HostBookingRequest> {
+  try {
+    const { getRiderRating } = await import("./riderRatingService");
+    if (!request.userId) return request;
+    const rep = await getRiderRating(request.userId);
+    return { ...request, riderReputation: { average: rep.average, count: rep.count } };
+  } catch {
+    return request;
+  }
 }
 
 export interface PayoutRequest {

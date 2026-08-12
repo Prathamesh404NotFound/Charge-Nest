@@ -61,7 +61,11 @@ export default function Earnings() {
         setSpotStats(stats);
         const q = await getHostPendingQueue(user.id);
         if (disposed) return;
-        setQueue(q);
+        // Surface each pending rider's reputation (host ratings of riders) so
+        // hosts can make informed accept decisions.
+        const enriched = await Promise.all(q.map((req) => enrichRiderReputation(req)));
+        if (disposed) return;
+        setQueue(enriched);
         const cal: typeof calendar = {};
         for (const spot of hostSpots) {
           cal[spot.id] = await getHostAvailability(user.id, spot.id);
@@ -227,6 +231,11 @@ export default function Earnings() {
                           <p className="text-sm font-medium text-foreground flex items-center gap-2">
                             {req.userName || "Rider"}
                             {req.emergency ? <span className="text-[10px] font-bold uppercase tracking-wide text-red-600 border border-red-200 rounded-full px-1.5">Rescue</span> : null}
+                            {req.riderReputation && req.riderReputation.count > 0 ? (
+                              <span className="text-[10px] font-bold uppercase tracking-wide text-ev-green border border-ev-green/40 rounded-full px-1.5">
+                                ★ {req.riderReputation.average} · {req.riderReputation.count} {req.riderReputation.count === 1 ? "review" : "reviews"}
+                              </span>
+                            ) : null}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {req.spotName} · {req.duration ?? 0} min · {formatDate(req.requestedAt)}

@@ -22,6 +22,7 @@ import {
 const navLinkKeys = [
   { to: "/", key: "nav.home" },
   { to: "/spots", key: "nav.findSpots" },
+  { to: "/loyalty", key: "nav.loyalty" },
   { to: "/host", key: "nav.becomeHost" },
   { to: "/how-it-works", key: "nav.howItWorks" },
   { to: "/pricing", key: "nav.pricing" },

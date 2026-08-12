@@ -12,8 +12,15 @@ import { getUserBookings, cancelBooking, BookingRequest } from "@/lib/bookingSer
 import ChatPanel from "@/components/ChatPanel";
 import RateRiderModal from "@/components/RateRiderModal";
 import { getUserProfile } from "@/lib/userService";
-import { Star } from "lucide-react";
+import { Star, Bell, BellRing } from "lucide-react";
 import { toast } from "sonner";
+import {
+  remindersSupported,
+  scheduleReminder,
+  removeReminder,
+  hasReminder,
+  armAllReminders,
+} from "@/lib/reminderService";
 import GoogleLoginModal from "@/components/Auth/GoogleLoginModal";
 import SEO from "@/components/SEO";
 import type { User } from "@/types";
@@ -37,6 +44,7 @@ export default function BookingHistory() {
   const [showLogin, setShowLogin] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [ratingTarget, setRatingTarget] = useState<BookingRequest | null>(null);
+  const [remindedBookings, setRemindedBookings] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!user) { setLoading(false); return; }
@@ -44,10 +52,34 @@ export default function BookingHistory() {
       .then(([b, p]) => {
         setBookings(b);
         setUserRole(p?.role ?? null);
+        const already = b.filter((x) => hasReminder(x.id)).map((x) => x.id);
+        setRemindedBookings(new Set(already));
+        armAllReminders();
       })
       .catch(() => toast.error("Failed to load booking history"))
       .finally(() => setLoading(false));
   }, [user]);
+
+  const handleReminder = async (booking: BookingRequest) => {
+    if (!user) return;
+    const isSet = remindedBookings.has(booking.id);
+    if (isSet) {
+      removeReminder(booking.id);
+      setRemindedBookings((prev) => {
+        const next = new Set(prev);
+        next.delete(booking.id);
+        return next;
+      });
+      toast.success("Reminder removed.");
+      return;
+    }
+    const scheduledAt = typeof booking.requestedAt === "number" ? booking.requestedAt : Date.now();
+    const result = await scheduleReminder(booking.id, booking.spotName || "Charging Spot", scheduledAt, 30);
+    toast[result.ok ? "success" : "warning"](result.message);
+    if (result.ok) {
+      setRemindedBookings((prev) => new Set(prev).add(booking.id));
+    }
+  };
 
   const handleCancel = async (booking: BookingRequest) => {
     if (!user) return;
@@ -213,15 +245,28 @@ export default function BookingHistory() {
                           </div>
                         </div>
 
-                        {booking.status === "pending" && (
-                          <div className="mt-3 flex justify-end">
-                            <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50"
-                              onClick={() => handleCancel(booking)}
-                              disabled={cancelling === booking.id}>
-                              {cancelling === booking.id
-                                ? <><Loader2 className="w-3 h-3 animate-spin mr-1" />Cancelling...</>
-                                : "Cancel Request"}
-                            </Button>
+                        {(booking.status === "pending" || booking.status === "approved") && (
+                          <div className="mt-3 flex items-center justify-end gap-2 flex-wrap">
+                            {booking.status === "pending" && (
+                              <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50"
+                                onClick={() => handleCancel(booking)}
+                                disabled={cancelling === booking.id}>
+                                {cancelling === booking.id
+                                  ? <><Loader2 className="w-3 h-3 animate-spin mr-1" />Cancelling...</>
+                                  : "Cancel Request"}
+                              </Button>
+                            )}
+                            {remindersSupported() && booking.status === "approved" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className={remindedBookings.has(booking.id) ? "gap-1.5 text-ev-green border-ev-green/40" : "gap-1.5 text-primary"}
+                                onClick={() => handleReminder(booking)}>
+                                {remindedBookings.has(booking.id)
+                                  ? <><BellRing className="w-3.5 h-3.5" />Reminder Set (30 min)</>
+                                  : <><Bell className="w-3.5 h-3.5" />Remind Me (30 min before)</>}
+                              </Button>
+                            )}
                           </div>
                         )}
 
