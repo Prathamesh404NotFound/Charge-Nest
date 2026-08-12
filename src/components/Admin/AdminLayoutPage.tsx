@@ -19,7 +19,8 @@ import {
   ChevronDown,
   Building,
   Search,
-  Wallet
+  Wallet,
+  ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '@/components/Auth/AuthProvider';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -74,6 +75,12 @@ const adminNavigation = [
     href: '/admin/payouts',
     icon: Wallet,
     description: 'Track host earnings and payouts'
+  },
+  {
+    title: 'Verifications',
+    href: '/admin/verifications',
+    icon: ShieldCheck,
+    description: 'Review host documents & grant trust'
   },
   {
     title: 'System Settings',

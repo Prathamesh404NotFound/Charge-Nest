@@ -100,6 +100,24 @@
         }
       }
     },
+    "hostVerifications": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        "$caseId": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null && auth.uid === $uid",
+          ".validate": "newData.child('uid').val() === $uid && newData.child('uid').val() === auth.uid"
+        }
+      }
+    },
+    "hostVerificationsIndex": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
+      "$caseId": {
+        ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
+        ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+        ".validate": "newData.hasChildren(['uid', 'status', 'documents']) && newData.child('uid').val() === data.child('uid').val()"
+      }
+    },
     "chargingRequests": {
       "$uid": {
         ".read": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).exists())",

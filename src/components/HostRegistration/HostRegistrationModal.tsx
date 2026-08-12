@@ -3,11 +3,17 @@ import {
   X, ArrowLeft, ArrowRight, Home, MapPin, Zap, DollarSign,
   Check, Phone, Mail, User, Navigation, Loader2, CheckCircle2,
   FileText, AlertTriangle, Search, Locate, Copy, ExternalLink,
+  ShieldCheck, Trash2, Plus, Eye,
 } from "lucide-react";
 import { useAuth } from "../Auth/AuthProvider";
 import { Button } from "@/components/ui/button";
 import StepIndicator from "@/components/StepIndicator";
 import { submitHostRegistration } from "@/lib/hostRegistration";
+import {
+  submitHostVerification,
+  getOwnVerificationCase,
+  setVerificationContactPhone,
+} from "@/lib/hostVerificationService";
 import { toast } from "sonner";
 import LocationPickerMap from "../LocationPickerMap";
 import { Capacitor } from "@capacitor/core";
@@ -22,6 +28,12 @@ interface HostRegistrationModalProps {
 }
 
 interface Coords { lat: number; lng: number }
+
+interface WizardDoc {
+  type: string;
+  label: string;
+  detail: string;
+}
 
 interface FormData {
   // Step 1 – Personal
@@ -44,7 +56,9 @@ interface FormData {
   chargingSpeed: string;
   availableHours: string;
   pricePerHour: string;
-  // Step 4 – Confirm
+  // Step 4 – Identity documents
+  documents: WizardDoc[];
+  // Step 5 – Confirm
   agreeToTerms: boolean;
 }
 
@@ -97,16 +111,26 @@ const defaultFormData = (user: any): FormData => ({
   chargingSpeed: "",
   availableHours: "",
   pricePerHour: "",
+  documents: [],
   agreeToTerms: false,
 });
 
 const STEPS = [
-  { label: "Personal Info",    icon: User    },
-  { label: "Location Details", icon: Home    },
-  { label: "Charging Setup",   icon: Zap     },
-  { label: "Confirm & Submit", icon: FileText },
+  { label: "Personal Info",    icon: User            },
+  { label: "Location Details", icon: Home            },
+  { label: "Charging Setup",   icon: Zap             },
+  { label: "Identity Docs",    icon: FileText        },
+  { label: "Confirm & Submit", icon: CheckCircle2    },
 ];
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 5;
+
+const DOC_TYPE_META: { type: string; label: string; hint: string }[] = [
+  { type: "aadhaar", label: "Aadhaar Card", hint: "First 4 + last 4 digits only — never full number" },
+  { type: "pan", label: "PAN Card", hint: "Masked number, e.g. ••••••ABCD" },
+  { type: "photo_id", label: "Driving Licence / Voter ID", hint: "Any government photo ID number" },
+  { type: "electricity_bill", label: "Electricity Bill", hint: "Shareable link or recent bill ref." },
+  { type: "other", label: "Other Document", hint: "Business licence, property proof, etc." },
+];
 
 // ─────────────────────────────────────────────────────────
 // Component
@@ -116,6 +140,9 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<FormData>(() => defaultFormData(user));
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Document form state (step 4)
+  const [docType, setDocType] = useState("aadhaar");
+  const [docDetail, setDocDetail] = useState("");
 
   // ── Autocomplete state ──
   const [addressQuery, setAddressQuery]         = useState("");
@@ -130,19 +157,30 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
   const [gpsError,    setGpsError]    = useState("");
   const [gpsSuccess,  setGpsSuccess]  = useState(false);
   const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null);
-  // "reliable" ≤100m | "approximate" ≤1000m | "imprecise" >1000m | null
   const [gpsQuality, setGpsQuality]   = useState<"reliable" | "approximate" | "imprecise" | null>(null);
 
   // ── Google Maps link state ──
   const [gmapsError,        setGmapsError]        = useState("");
   const [linkCopied,        setLinkCopied]        = useState(false);
   const [gmapsLinkLoading,  setGmapsLinkLoading]  = useState(false);
-  // Flag: after GPS resolves, auto-generate the maps link
   const generateLinkOnGpsRef = useRef(false);
+
+  // ── Live preview toggle ──
+  const [previewOpen, setPreviewOpen] = useState(true);
 
   const update = useCallback(<K extends keyof FormData>(field: K, value: FormData[K]) => {
     setForm(prev => ({ ...prev, [field]: value }));
   }, []);
+
+  // ── Pre-fill phone onto the verification contact when the modal opens ──
+  useEffect(() => {
+    if (!isOpen || !user) return;
+    setForm(prev => (prev.documents.length === 0 ? defaultFormData(user) : prev));
+    setDocType("aadhaar");
+    setDocDetail("");
+    setStep(1);
+    setPreviewOpen(true);
+  }, [isOpen, user]);
 
   // ── Dismiss suggestion list when clicking outside ──
   useEffect(() => {
@@ -185,7 +223,6 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
     const addr = result.address;
     const addrCoords: Coords = { lat, lng };
 
-    // Detect mismatch if GPS already pinned
     const newSource = form.gpsCoords
       ? (haversineKm(form.gpsCoords, addrCoords) > 2 ? "address" : form.coordSource)
       : "address";
@@ -237,8 +274,8 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
     } catch {
       setForm(prev => ({ ...prev, gpsCoords: gps, coordinates: gps, locationLabel: label, coordSource: "gps" }));
     }
-    setLocationAccuracy(null);  // manually placed — no GPS accuracy
-    setGpsQuality("reliable");  // user explicitly chose this point
+    setLocationAccuracy(null);
+    setGpsQuality("reliable");
     setGpsSuccess(true);
     setGpsError("");
   };
@@ -255,7 +292,7 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
     const applyGpsResult = async (pos: { coords: { latitude: number; longitude: number; accuracy: number } }) => {
       const lat      = pos.coords.latitude;
       const lng      = pos.coords.longitude;
-      const accuracy = Math.round(pos.coords.accuracy); // metres, 95% confidence
+      const accuracy = Math.round(pos.coords.accuracy);
       const gps: Coords = { lat, lng };
       let label = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 
@@ -375,17 +412,12 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
     }
   };
 
-  // ── Mismatch flag ──
   const hasMismatch =
     !!form.addressCoords &&
     !!form.gpsCoords &&
     haversineKm(form.addressCoords, form.gpsCoords) > 2;
 
-  // ─────────────────────────────────────────────────────
-  // Google Maps link handlers
-  // ─────────────────────────────────────────────────────
-
-  /** Build a Google Maps link from current coordinates (or request GPS first). */
+  // ── Google Maps link handlers ──
   const handleGenerateGmapsLink = () => {
     if (form.coordinates) {
       const { lat, lng } = form.coordinates;
@@ -394,13 +426,11 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
       setGmapsError("");
       return;
     }
-    // No coordinates yet — request GPS and generate after it resolves
     setGmapsLinkLoading(true);
     generateLinkOnGpsRef.current = true;
     handleGetGps();
   };
 
-  /** Copy the current googleMapsLink to clipboard with brief Check feedback. */
   const handleCopyGmapsLink = async () => {
     if (!form.googleMapsLink) return;
     try {
@@ -408,7 +438,6 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
       setLinkCopied(true);
       setTimeout(() => setLinkCopied(false), 2000);
     } catch {
-      // Fallback for older browsers
       const el = document.createElement("textarea");
       el.value = form.googleMapsLink;
       document.body.appendChild(el);
@@ -420,12 +449,10 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
     }
   };
 
-  /** Parse a pasted / typed Google Maps URL and update coordinates + address. */
   const handleParseGmapsLink = async (raw: string) => {
     const url = raw.trim();
     if (!url) { setGmapsError(""); return; }
 
-    // Shortened links — CORS prevents client-side resolution
     if (/maps\.app\.goo\.gl|goo\.gl\/maps/i.test(url)) {
       setGmapsError(
         "Shortened links can't be read automatically — please open the link, then copy the full URL from your browser's address bar (it will contain numbers like '18.5204,73.8567'), or use GPS / map-click instead."
@@ -433,7 +460,6 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
       return;
     }
 
-    // Try to extract coordinates
     const qMatch  = url.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/);
     const atMatch = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
     const match   = qMatch || atMatch;
@@ -448,7 +474,6 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
     setGmapsError("");
     const lat = parseFloat(match[1]);
     const lng = parseFloat(match[2]);
-    // Delegate to handleManualPin — it reverse-geocodes and updates all fields
     await handleManualPin(lat, lng);
   };
 
@@ -458,12 +483,12 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
       case 1: return !!(form.fullName.trim() && form.email.trim() && form.phone.trim());
       case 2: return !!(form.city.trim() && form.coordinates);
       case 3: return !!(form.outletType && form.availableHours && form.pricePerHour && form.coordinates);
-      case 4: return form.agreeToTerms;
+      case 4: return form.documents.length >= 1;
+      case 5: return form.agreeToTerms;
       default: return true;
     }
   };
 
-  // ── After GPS resolves, optionally auto-generate the maps link ──
   useEffect(() => {
     if (generateLinkOnGpsRef.current && form.coordinates && !gpsLoading) {
       generateLinkOnGpsRef.current = false;
@@ -474,11 +499,14 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
     }
   }, [form.coordinates, gpsLoading, update]);
 
-  // ── Submit ──
+  // ── Submit registration + verification documents ──
   const handleSubmit = async () => {
+    if (!user) return;
     setIsSubmitting(true);
+    let registrationId: string | undefined;
     try {
-      await submitHostRegistration({
+      // 1. Submit the host registration (spot listing application)
+      const regResult = await submitHostRegistration({
         fullName:       form.fullName,
         email:          form.email,
         phone:          form.phone,
@@ -494,7 +522,33 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
         agreeToTerms:   form.agreeToTerms,
         googleMapsLink: form.googleMapsLink || "",
       });
-      toast.success("You're registered! We'll verify your spot and notify you within 24–48 hours.");
+      registrationId = regResult.registrationId;
+
+      // 2. Submit identity documents so the host enters the verification queue
+      if (form.documents.length > 0) {
+        const existing = await getOwnVerificationCase(user.uid);
+        // Mirror contact phone onto the verification case for the review queue
+        if (form.phone && (!existing || !existing.userPhone)) {
+          await setVerificationContactPhone(user.uid, form.phone);
+        }
+        try {
+          await submitHostVerification({
+            registrationId,
+            documents: form.documents.map((d) => ({
+              type: DOC_TYPE_META.some((m) => m.type === d.type)
+                ? (d.type as any)
+                : "other",
+              label: d.label.slice(0, 80),
+              documentNumber: d.detail.slice(0, 40),
+            })),
+          });
+        } catch (docError) {
+          console.error("Document submission failed:", docError);
+          toast.warning("Registration saved, but documents failed to attach — you can upload them later in Dashboard → Settings.");
+        }
+      }
+
+      toast.success("You're registered! We'll verify your identity and spot, then notify you within 24–48 hours.");
       onClose();
       setStep(1);
       setForm(defaultFormData(user));
@@ -514,7 +568,6 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
   // ─────────────────────────────────────────────────────
   const renderStep = () => {
     switch (step) {
-
       /* ── Step 1: Personal Info ── */
       case 1:
         return (
@@ -527,7 +580,6 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
               <p className="text-muted-foreground">Tell us about yourself</p>
             </div>
             <div className="space-y-4">
-              {/* Full Name */}
               <div>
                 <label className="block text-sm font-medium mb-2">Full Name</label>
                 <div className="relative">
@@ -538,7 +590,6 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
                     placeholder="Enter your full name" />
                 </div>
               </div>
-              {/* Email */}
               <div>
                 <label className="block text-sm font-medium mb-2">Email Address</label>
                 <div className="relative">
@@ -549,7 +600,6 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
                     placeholder="your@email.com" />
                 </div>
               </div>
-              {/* Phone */}
               <div>
                 <label className="block text-sm font-medium mb-2">Phone Number</label>
                 <div className="relative">
@@ -576,7 +626,6 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
               <p className="text-muted-foreground">Where is your charging spot? Detect via GPS or enter manually.</p>
             </div>
 
-            {/* ── GPS button — PRIMARY, at the top ── */}
             <button
               onClick={handleGetGps}
               disabled={gpsLoading}
@@ -603,7 +652,6 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
               )}
             </button>
 
-            {/* ── Accuracy-tier banners ── */}
             {gpsSuccess && !gpsError && gpsQuality === "reliable" && (
               <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-3 flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
                 <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
@@ -626,22 +674,18 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
                 </span>
               </div>
             )}
-
-            {/* ── GPS error ── */}
             {gpsError && (
               <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3 text-sm text-red-700 dark:text-red-400">
                 {gpsError}
               </div>
             )}
 
-            {/* ── Divider ── */}
             <div className="flex items-center gap-3">
               <div className="flex-1 border-t border-border" />
               <span className="text-xs text-muted-foreground uppercase tracking-wide">or enter manually</span>
               <div className="flex-1 border-t border-border" />
             </div>
 
-            {/* ── Street address (auto-filled by GPS or typed manually) ── */}
             <div>
               <label className="block text-xs font-medium mb-1.5 text-muted-foreground uppercase tracking-wide">
                 Street Address <span className="text-primary">*</span>
@@ -658,7 +702,6 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
               </div>
             </div>
 
-            {/* ── City + State ── */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium mb-1.5 text-muted-foreground uppercase tracking-wide">City <span className="text-primary">*</span></label>
@@ -676,7 +719,6 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
               </div>
             </div>
 
-            {/* ── PIN Code ── */}
             <div>
               <label className="block text-xs font-medium mb-1.5 text-muted-foreground uppercase tracking-wide">PIN Code</label>
               <input type="text" value={form.pincode}
@@ -685,14 +727,12 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
                 placeholder="400001" />
             </div>
 
-            {/* ── Address autocomplete search ── */}
             <div>
-              <label className="block text-sm font-medium mb-2">Or search by landmark / area</label>
+              <label className="block text-xs font-medium mb-1.5 text-muted-foreground uppercase tracking-wide">
+                Search Address <span className="text-primary">*</span>
+              </label>
               <div className="relative" ref={suggBoxRef}>
-                <Search className="absolute left-3 top-3.5 w-4 h-4 text-muted-foreground z-10" />
-                {suggestLoading && (
-                  <Loader2 className="absolute right-3 top-3.5 w-4 h-4 text-muted-foreground animate-spin z-10" />
-                )}
+                <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                 <input
                   type="text"
                   value={addressQuery}
@@ -701,7 +741,9 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
                   className="w-full pl-9 pr-10 py-3 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all bg-background text-foreground text-sm"
                   placeholder="Start typing an address, landmark, or area…"
                 />
-                {/* Suggestion dropdown */}
+                {suggestLoading && (
+                  <Loader2 className="absolute right-3 top-3 w-4 h-4 animate-spin text-muted-foreground" />
+                )}
                 {showSuggestions && (
                   <div className="absolute top-full left-0 right-0 mt-1 bg-background border border-border rounded-xl shadow-xl z-[9999] overflow-hidden">
                     {suggestions.map(r => (
@@ -719,7 +761,6 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
               </div>
             </div>
 
-            {/* ── Mismatch warning ── */}
             {hasMismatch && (
               <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-xl p-4 flex gap-3">
                 <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
@@ -760,7 +801,6 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
               </div>
             )}
 
-            {/* ── Map: draggable pin preview or click-to-place ── */}
             <LocationPickerMap
               value={form.coordinates}
               onChange={coords => handleManualPin(coords.lat, coords.lng)}
@@ -769,7 +809,6 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
               height="220px"
             />
 
-            {/* ── Confirmed coordinates display (with accuracy) ── */}
             {form.coordinates && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground px-1 flex-wrap">
                 <CheckCircle2 className={`w-4 h-4 flex-shrink-0 ${
@@ -785,14 +824,13 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
                       gpsQuality === "reliable" ? "text-green-600" :
                       gpsQuality === "approximate" ? "text-amber-600" : "text-orange-600"
                     }`}>
-                      {" · accuracy: ±{locationAccuracy}m"}
+                      {" · accuracy: ±"}{locationAccuracy}{"m"}
                     </span>
                   )}
                 </span>
               </div>
             )}
 
-            {/* ── Google Maps link — third optional method ── */}
             <div className="pt-3 border-t border-border space-y-3">
               <div className="flex items-center gap-3">
                 <div className="flex-1 border-t border-border" />
@@ -800,7 +838,6 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
                 <div className="flex-1 border-t border-border" />
               </div>
 
-              {/* Generate button */}
               <button
                 type="button"
                 onClick={handleGenerateGmapsLink}
@@ -814,7 +851,6 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
                 )}
               </button>
 
-              {/* Link input + copy button */}
               <div className="relative">
                 <input
                   type="url"
@@ -825,7 +861,6 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
                   }}
                   onBlur={e => handleParseGmapsLink(e.target.value)}
                   onPaste={e => {
-                    // process pasted text after React updates value
                     const pasted = e.clipboardData.getData("text");
                     setTimeout(() => handleParseGmapsLink(pasted), 0);
                   }}
@@ -846,7 +881,6 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
                 )}
               </div>
 
-              {/* Open-in-Maps shortcut */}
               {form.googleMapsLink && !gmapsError && (
                 <a
                   href={form.googleMapsLink}
@@ -859,7 +893,6 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
                 </a>
               )}
 
-              {/* Inline parse errors */}
               {gmapsError && (
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3 text-xs text-red-700 dark:text-red-400">
                   {gmapsError}
@@ -942,19 +975,130 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
           </div>
         );
 
-      /* ── Step 4: Confirm & Submit ── */
+      /* ── Step 4: Identity Verification Documents ── */
       case 4:
         return (
           <div className="space-y-6">
             <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <FileText className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-foreground mb-2">Identity Verification</h3>
+              <p className="text-muted-foreground">
+                Attach 1–4 documents so our team can verify you and unlock the{" "}
+                <span className="text-primary font-semibold">Verified Host</span> badge.
+              </p>
+            </div>
+
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex gap-3 text-xs text-amber-800 dark:text-amber-400">
+              <ShieldCheck className="w-5 h-5 flex-shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+              <div>
+                <p className="font-semibold mb-1">Your documents stay secure</p>
+                <p>
+                  Only VoltSetu admins see your documents during review. Mask sensitive numbers (show only
+                  the first and last few digits) — a full Aadhaar/PAN number is never required.
+                </p>
+              </div>
+            </div>
+
+            {/* Current type picker */}
+            <div className="space-y-3">
+              <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide">Add a document</label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {DOC_TYPE_META.map(m => (
+                  <button
+                    key={m.type}
+                    onClick={() => setDocType(m.type)}
+                    className={`p-3 rounded-xl border-2 text-left transition-all ${
+                      docType === m.type
+                        ? "border-primary bg-primary/10"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                  >
+                    <p className={`text-sm font-medium ${docType === m.type ? "text-primary" : "text-foreground"}`}>
+                      {m.label}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{m.hint}</p>
+                  </button>
+                ))}
+              </div>
+              <input
+                type="text"
+                value={docDetail}
+                onChange={e => setDocDetail(e.target.value)}
+                placeholder="Masked number or link, e.g. ••••1234 or https://drive.google.com/…"
+                className="w-full px-4 py-3 border border-border rounded-xl text-sm bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!docDetail.trim() || form.documents.length >= 4}
+                onClick={() => {
+                  const meta = DOC_TYPE_META.find(m => m.type === docType);
+                  setForm(prev => ({
+                    ...prev,
+                    documents: [
+                      ...prev.documents,
+                      { type: docType, label: meta?.label || docType, detail: docDetail.trim() },
+                    ],
+                  }));
+                  setDocDetail("");
+                  toast.success("Document attached");
+                }}
+                className="w-full gap-2"
+              >
+                <Plus className="w-4 h-4" /> Add Document
+                {form.documents.length >= 4 && " (max 4)"}
+              </Button>
+            </div>
+
+            {/* Attached documents list */}
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                Attached ({form.documents.length})
+              </p>
+              {form.documents.length === 0 ? (
+                <p className="text-sm text-muted-foreground border border-dashed border-border rounded-xl p-4 text-center">
+                  No documents attached yet — add at least one to proceed.
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {form.documents.map((d, i) => (
+                    <li key={i} className="flex items-center gap-3 bg-muted/40 border border-border rounded-xl px-3 py-2.5">
+                      <FileText className="w-4 h-4 text-primary flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{d.label}</p>
+                        <p className="text-xs text-muted-foreground truncate">{d.detail}</p>
+                      </div>
+                      <button
+                        onClick={() => setForm(prev => ({
+                          ...prev, documents: prev.documents.filter((_, j) => j !== i),
+                        }))}
+                        className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                        aria-label="Remove document"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        );
+
+      /* ── Step 5: Confirm & Submit ── */
+      case 5:
+        return (
+          <div className="space-y-6">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <CheckCircle2 className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-2xl font-bold text-foreground mb-2">Confirm &amp; Submit</h3>
               <p className="text-muted-foreground">Review your details and complete registration</p>
             </div>
 
-            {/* ── GPS pin confirmation ── */}
             {form.coordinates ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -975,7 +1119,6 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
                   </button>
                 </div>
 
-                {/* Location Picker Map preview and correction */}
                 <LocationPickerMap
                   value={form.coordinates}
                   onChange={coords => handleManualPin(coords.lat, coords.lng)}
@@ -986,7 +1129,6 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
                 />
               </div>
             ) : (
-              /* No coordinates — blocking prompt */
               <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-xl p-4 flex gap-3">
                 <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                 <div>
@@ -1032,7 +1174,22 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
                   <p className="font-medium text-foreground">{form.availableHours || "—"}</p>
                 </div>
               </div>
-              {/* Google Maps link row */}
+              {form.documents.length > 0 && (
+                <div className="pt-3 border-t border-border/60">
+                  <p className="text-muted-foreground text-xs uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5" /> Verification documents ({form.documents.length})
+                  </p>
+                  <ul className="space-y-1.5">
+                    {form.documents.map((d, i) => (
+                      <li key={i} className="text-xs text-foreground flex items-center gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                        <span>{d.label}</span>
+                        <span className="text-muted-foreground truncate">· {d.detail}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               {form.googleMapsLink && (
                 <div className="pt-3 border-t border-border/60">
                   <p className="text-muted-foreground text-xs uppercase tracking-wide mb-1">Google Maps link</p>
@@ -1052,15 +1209,16 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
             <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
               <h4 className="font-medium text-amber-900 dark:text-amber-300 mb-2 text-sm">What happens next?</h4>
               <ul className="text-xs text-amber-800 dark:text-amber-400 space-y-1">
-                <li>• Our team will review your spot within 24–48 hours</li>
+                <li>• Our team reviews your identity documents within 24–48 hours</li>
+                <li>• Once verified, you earn the <strong>Verified Host</strong> badge and your spot goes live</li>
                 <li>• You'll receive a confirmation email once approved</li>
-                <li>• Your charging spot will go live and start attracting riders</li>
+                <li>• Your charging spot will start attracting riders</li>
               </ul>
             </div>
 
             <div className="flex items-start gap-3">
               <input type="checkbox" id="terms" checked={form.agreeToTerms}
-                onChange={e => update("agreeToTerms", e.target.checked)}
+                onChange={e => update("agreeToTerms", e.checked)}
                 className="mt-1 w-4 h-4 text-primary border-border rounded focus:ring-primary" />
               <label htmlFor="terms" className="text-sm text-muted-foreground">
                 I agree to the{" "}
@@ -1083,13 +1241,21 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
   // ─────────────────────────────────────────────────────
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-4">
-      <div className="bg-background rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden relative">
+      <div className="bg-background rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-5xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden relative flex flex-col">
 
         {/* Header */}
         <div className="sticky top-0 bg-background border-b border-border px-4 sm:px-6 py-4 sm:py-5 z-10">
           <div className="flex items-center justify-between mb-4">
-            <button onClick={onClose} className="p-2 rounded-lg hover:bg-muted transition-colors">
+            <button onClick={onClose} className="p-2 rounded-lg hover:bg-muted transition-colors" aria-label="Close registration">
               <X className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setPreviewOpen(v => !v)}
+              className={`hidden lg:flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold border transition-colors ${
+                previewOpen ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              <Eye className="w-3.5 h-3.5" /> {previewOpen ? "Hide Live Preview" : "Show Live Preview"}
             </button>
           </div>
           <StepIndicator
@@ -1099,9 +1265,77 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
           />
         </div>
 
-        {/* Content */}
-        <div className="px-4 sm:px-6 py-5 overflow-y-auto max-h-[calc(95vh-200px)] sm:max-h-[calc(90vh-200px)]">
-          {renderStep()}
+        {/* Body: form + live preview */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="flex flex-col lg:flex-row">
+            <div className="flex-1 px-4 sm:px-6 py-5 max-h-[calc(95vh-200px)] sm:max-h-[calc(90vh-200px)]">
+              {renderStep()}
+            </div>
+
+            {/* ── Live preview pane (desktop) ── */}
+            {previewOpen && (
+              <div className="hidden lg:flex flex-col w-72 border-l border-border bg-muted/30 p-5 gap-4 shrink-0 max-h-[calc(90vh-200px)] overflow-y-auto">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground mb-2">
+                    Live Listing Preview
+                  </p>
+                  <div className="bg-background rounded-2xl border border-border shadow-sm p-4 space-y-3">
+                    <div className="h-24 rounded-xl gradient-green flex items-center justify-center">
+                      <Zap className="w-8 h-8 text-white/80" />
+                    </div>
+                    <div>
+                      <h4 className="font-display font-semibold text-sm truncate">
+                        {form.fullName || "Your Name"}'s Charging Spot
+                      </h4>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {form.address || "Your street address"} · {form.city || "City"}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="flex items-center gap-1 text-muted-foreground">
+                        <MapPin className="w-3 h-3" />
+                        {form.coordSource === "gps" ? "GPS pinned" : form.coordinates ? "Address pinned" : "No pin yet"}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        form.coordinates
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-muted text-muted-foreground"
+                      }`}>
+                        {form.coordinates ? "Ready" : "Missing pin"}
+                      </span>
+                    </div>
+                    <div className="border-t border-border pt-2.5 space-y-2 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Outlet</span>
+                        <span className="font-medium">{form.outletType || "—"}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Speed</span>
+                        <span className="font-medium">{form.chargingSpeed || "—"}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Hours</span>
+                        <span className="font-medium">{form.availableHours || "—"}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Price</span>
+                        <span className="font-semibold text-primary">
+                          {form.pricePerHour ? `₹${form.pricePerHour}/hr` : "—"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Docs</span>
+                        <span className="font-medium">{form.documents.length} attached</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  This is how riders will see your listing on VoltSetu. Keep filling the form — the preview updates instantly.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Footer */}
@@ -1133,7 +1367,9 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
             <p className="text-xs text-muted-foreground text-center mt-2">
               {step === 2
                 ? "Please search for an address or use GPS to pin your location"
-                : "Please fill in all required fields to continue"}
+                : step === 4
+                  ? "Attach at least one document to continue"
+                  : "Please fill in all required fields to continue"}
             </p>
           )}
         </div>

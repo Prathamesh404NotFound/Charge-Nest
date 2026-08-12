@@ -42,6 +42,7 @@ const lazyAdminSpots = () => import("./pages/Admin/AdminSpotsPage");
 const lazyAdminRequests = () => import("./pages/Admin/AdminRequestsPage");
 const lazyAdminAnalytics = () => import("./pages/Admin/AdminAnalyticsPage");
 const lazyAdminPayouts = () => import("./pages/Admin/AdminPayoutsPage");
+const lazyAdminVerifications = () => import("./pages/Admin/AdminVerificationsPage");
 const lazyAdminGovStations = () => import("./pages/Admin/AdminGovernmentStationsPage");
 
 const queryClient = new QueryClient();
@@ -146,6 +147,7 @@ function AppContent() {
           <Route path="requests" element={<LazyPage load={lazyAdminRequests} />} />
           <Route path="analytics" element={<LazyPage load={lazyAdminAnalytics} />} />
           <Route path="payouts" element={<LazyPage load={lazyAdminPayouts} />} />
+          <Route path="verifications" element={<LazyPage load={lazyAdminVerifications} />} />
           <Route path="settings" element={<LazyPage load={lazyAdminDashboard} />} />
         </Route>
 
