@@ -20,7 +20,8 @@ import {
   Building,
   Search,
   Wallet,
-  ShieldCheck
+  ShieldCheck,
+  ClipboardList
 } from 'lucide-react';
 import { useAuth } from '@/components/Auth/AuthProvider';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -75,6 +76,12 @@ const adminNavigation = [
     href: '/admin/payouts',
     icon: Wallet,
     description: 'Track host earnings and payouts'
+  },
+  {
+    title: 'Listing Reviews',
+    href: '/admin/listing-reviews',
+    icon: ClipboardList,
+    description: 'Approve or reject new spot listings'
   },
   {
     title: 'Verifications',

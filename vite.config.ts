@@ -25,6 +25,8 @@ export default defineConfig(({ mode }) => ({
         manualChunks: {
           leaflet: ["leaflet", "react-leaflet"],
           recharts: ["recharts"],
+          firebase: ["firebase/app", "firebase/auth", "firebase/database", "firebase/storage", "@firebase/util"],
+          lucide: ["lucide-react"],
         },
       },
     },
