@@ -187,6 +187,16 @@ export default function BookingHistory() {
                                 ₹{booking.estimatedCost > 0 ? booking.estimatedCost : Math.round((booking.pricePerHour * booking.duration) / 60)}
                               </p>
                               <p className="text-xs text-muted-foreground">₹{booking.pricePerHour}/hr</p>
+                              {booking.depositStatus === "paid" && (
+                                <p className="mt-0.5 inline-flex items-center gap-1 text-xs font-semibold text-emerald-600">
+                                  <BadgeCheck className="w-3 h-3" />₹{booking.depositAmount} deposit paid
+                                </p>
+                              )}
+                              {booking.emergency && (
+                                <p className="mt-0.5 inline-flex items-center gap-1 text-xs font-semibold text-red-500">
+                                  <Zap className="w-3 h-3" />Roadside Rescue
+                                </p>
+                              )}
                             </div>
                             <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${cfg.color}`}>
                               <Icon className="w-3 h-3" />{cfg.label}

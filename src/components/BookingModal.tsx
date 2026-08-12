@@ -21,7 +21,9 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { submitBookingRequest } from "@/lib/bookingService";
+import { computeDepositAmount, startDepositPayment } from "@/lib/paymentsService";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/components/Auth/AuthProvider";
 import { cn } from "@/lib/utils";
 import { useIsMobile, useIsDesktop } from "@/hooks/use-mobile";
 import StepIndicator from "@/components/StepIndicator";
@@ -235,6 +237,7 @@ export default function BookingModal({ isOpen, onClose, spot }: BookingModalProp
   const isMobile = useIsMobile();
   const isDesktop = useIsDesktop();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [stepValidationError, setStepValidationError] = useState("");
@@ -245,10 +248,19 @@ export default function BookingModal({ isOpen, onClose, spot }: BookingModalProp
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [durationError, setDurationError] = useState(false);
+  const [depositMode, setDepositMode] = useState<boolean>(isPaymentsEnabled());
+  const [depositAmount, setDepositAmount] = useState(0);
+  const [depositStatus, setDepositStatus] = useState<"idle" | "paying" | "paid" | "failed">("idle");
+  const [depositError, setDepositError] = useState<string>("");
+  const [depositOrderRef, setDepositOrderRef] = useState<{ orderId: string; session: string } | null>(null);
 
   const activeDuration = duration === 0 ? customMinutes : duration;
   const estimatedCost = Math.round((spot.pricePerHour / 60) * activeDuration);
   const isDurationValid = activeDuration >= MIN_DURATION;
+
+  useEffect(() => {
+    setDepositAmount(computeDepositAmount(estimatedCost));
+  }, [estimatedCost]);
 
   const spotImage = spot.photos?.[0];
   const spotLocation = spot.address || spot.city || "Unknown area";
@@ -268,6 +280,10 @@ export default function BookingModal({ isOpen, onClose, spot }: BookingModalProp
       setMessage("");
       setPaymentAcknowledged(false);
       setLoading(false);
+      setDepositMode(isPaymentsEnabled());
+      setDepositStatus("idle");
+      setDepositError("");
+      setDepositOrderRef(null);
     }
   }, [isOpen]);
 
@@ -367,6 +383,27 @@ export default function BookingModal({ isOpen, onClose, spot }: BookingModalProp
     scrollToTop();
   };
 
+  const handlePayDeposit = async () => {
+    const paid = await startDepositPayment({
+      amount: depositAmount,
+      spotId: spot.id ?? "",
+      spotName: spot.name,
+      uid: user?.uid ?? "",
+      customerName: user?.displayName ?? undefined,
+      customerEmail: user?.email ?? undefined,
+    });
+    if (paid.outcome === "paid") {
+      setDepositOrderRef({ orderId: paid.order!.order_id, session: paid.order!.payment_session_id });
+      setDepositStatus("paid");
+      setDepositError("");
+      toast.success("Deposit secured — your spot is held.");
+    } else {
+      setDepositStatus("failed");
+      setDepositError(paid.error || "Payment could not be completed.");
+      toast.error(paid.error || "Payment could not be completed.");
+    }
+  };
+
   const handleBook = async () => {
     if (!canProceedStep(4)) {
       setStepValidationError(getStepValidationMessage(4));
@@ -375,6 +412,16 @@ export default function BookingModal({ isOpen, onClose, spot }: BookingModalProp
     }
     if (!spot.id) {
       toast.error("Invalid spot selected.");
+      return;
+    }
+
+    if (depositMode && depositStatus === "idle") {
+      setLoading(true);
+      try {
+        await handlePayDeposit();
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 
@@ -391,6 +438,11 @@ export default function BookingModal({ isOpen, onClose, spot }: BookingModalProp
         estimatedCost,
         city: spot.city || "Unknown",
         outletType: spot.outletType || "Standard",
+        depositAmount: depositMode && depositOrderRef ? depositAmount : undefined,
+        depositCurrency: depositMode && depositOrderRef ? "INR" : undefined,
+        depositStatus: depositMode && depositOrderRef ? "paid" : "none",
+        cfOrderId: depositMode && depositOrderRef ? depositOrderRef.orderId : undefined,
+        cfPaymentSessionId: depositMode && depositOrderRef ? depositOrderRef.session : undefined,
       });
 
       setSuccess(true);
@@ -473,8 +525,10 @@ export default function BookingModal({ isOpen, onClose, spot }: BookingModalProp
                 className="font-medium text-foreground text-center pb-3 border-b border-border/60"
                 data-testid="booking-success-summary"
               >
-                Booked {spot.name} for {formatDuration(activeDuration)} — ₹{estimatedCost} due on
-                arrival
+                Booked {spot.name} for {formatDuration(activeDuration)} —{" "}
+                {depositMode && depositOrderRef
+                  ? `₹${depositAmount} deposit secured, ₹${estimatedCost - depositAmount} due on arrival`
+                  : `₹${estimatedCost} due on arrival`}
               </p>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Spot:</span>
@@ -488,6 +542,12 @@ export default function BookingModal({ isOpen, onClose, spot }: BookingModalProp
                 <span className="text-muted-foreground">Est. Cost:</span>
                 <span className="font-semibold text-green-600">₹{estimatedCost}</span>
               </div>
+              {depositMode && depositOrderRef && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Deposit paid:</span>
+                  <span className="font-semibold text-emerald-600">₹{depositAmount}</span>
+                </div>
+              )}
 
               {spot.hostPhone && (
                 <div className="flex gap-2 pt-3 mt-1 border-t border-border/60">
@@ -569,8 +629,10 @@ export default function BookingModal({ isOpen, onClose, spot }: BookingModalProp
             {loading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                Booking...
+                {depositMode && depositStatus === "idle" ? "Opening secure checkout…" : "Booking..."}
               </>
+            ) : depositMode && depositStatus === "idle" ? (
+              `Pay ₹${depositAmount} deposit & book`
             ) : (
               "Confirm Booking"
             )}
@@ -869,8 +931,66 @@ export default function BookingModal({ isOpen, onClose, spot }: BookingModalProp
                     <BadgeCheck className="w-3.5 h-3.5 text-ev-green shrink-0" />
                     <span>Pay via Cash/UPI on arrival</span>
                   </div>
+                  {depositMode && depositOrderRef && (
+                    <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
+                      <BadgeCheck className="w-3.5 h-3.5 shrink-0" />
+                      Deposit of ₹{depositAmount} secured — held in escrow against your booking
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {isPaymentsEnabled() && (
+                <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                  <p className="mb-1 text-sm font-semibold text-foreground">Reserve with a deposit</p>
+                  <p className="mb-3 text-xs text-muted-foreground">
+                    Pay ₹{depositAmount} now to lock this spot — it's deducted from your final bill. Skip it and pay
+                    everything on arrival as usual.
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDepositMode(true);
+                        setDepositStatus("idle");
+                        setDepositOrderRef(null);
+                        setPaymentAcknowledged(false);
+                      }}
+                      className={cn(
+                        "flex-1 rounded-xl border-2 px-3 py-2.5 text-sm font-semibold transition-colors",
+                        depositMode
+                          ? "border-primary bg-primary/5 text-primary"
+                          : "border-border text-muted-foreground hover:border-primary/50"
+                      )}
+                    >
+                      Deposit ₹{depositAmount} · hold my spot
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDepositMode(false);
+                        setDepositOrderRef(null);
+                      }}
+                      className={cn(
+                        "flex-1 rounded-xl border-2 px-3 py-2.5 text-sm font-semibold transition-colors",
+                        !depositMode
+                          ? "border-foreground bg-muted text-foreground"
+                          : "border-border text-muted-foreground hover:border-foreground/50"
+                      )}
+                    >
+                      Pay at spot
+                    </button>
+                  </div>
+                  {depositMode && depositStatus === "failed" && depositError && (
+                    <p className="mt-2 text-xs text-destructive">{depositError}</p>
+                  )}
+                  {depositMode && depositStatus === "paid" && (
+                    <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-emerald-600">
+                      <BadgeCheck className="w-3.5 h-3.5" /> Deposit paid — tap Confirm Booking to send the request
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="flex items-start gap-3">
                 <input

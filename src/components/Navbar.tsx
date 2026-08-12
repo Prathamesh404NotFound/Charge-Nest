@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, Zap, MapPin, ChevronDown } from "lucide-react";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Menu, X, Zap, MapPin, ChevronDown, BatteryWarning } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "./Auth/AuthProvider";
 import GoogleLoginModal from "./Auth/GoogleLoginModal";
@@ -34,7 +34,20 @@ export default function Navbar() {
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
+
+  // Auto-open the sign-in modal when a deep link arrives with ?signin
+  // (e.g. the Roadside Rescue page redirecting unsigned riders).
+  useEffect(() => {
+    if (searchParams.get("signin") && !loginModalOpen) {
+      setLoginModalOpen(true);
+      if (location.pathname === "/") {
+        window.history.replaceState(null, "", "/");
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.get("signin")]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -116,6 +129,14 @@ export default function Navbar() {
         <div className="hidden lg:flex items-center gap-1.5 xl:gap-3">
           <CitySelector onNavigate={navigate} />
           <InstallPwaButton />
+          <Link
+            to="/rescue"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-red-700/50 bg-red-950/40 px-3 py-2 text-xs font-bold uppercase tracking-wide text-red-400 transition-all hover:border-red-600 hover:bg-red-900/40 hover:text-red-300"
+            aria-label="Roadside Rescue — emergency stranded rider mode"
+          >
+            <BatteryWarning className="h-3.5 w-3.5 animate-pulse" />
+            Rescue
+          </Link>
           {user ? (
             <>
               <NotificationBell />
@@ -181,6 +202,15 @@ export default function Navbar() {
             </div>
             <div className="px-4 py-2">
               <InstallPwaButton />
+            </div>
+            <div className="px-4 py-2">
+              <Link
+                to="/rescue"
+                className="flex w-full items-center gap-2 rounded-xl border border-red-700/50 bg-red-950/40 px-4 py-3 text-sm font-bold uppercase tracking-wide text-red-400 transition-colors hover:border-red-600 hover:bg-red-900/40"
+              >
+                <BatteryWarning className="h-4 w-4 animate-pulse" />
+                Roadside Rescue — I'm stranded
+              </Link>
             </div>
             {user ? (
               <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row items-center gap-3 px-4">

@@ -20,6 +20,7 @@ import HowItWorks from "./pages/HowItWorks";
 import Pricing from "./pages/Pricing";
 import CityKolhapur from "./pages/CityKolhapur";
 import CityPage from "./pages/CityPage";
+import EmergencyRescue from "./pages/EmergencyRescue";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Dashboard from "./pages/Dashboard";
@@ -87,6 +88,7 @@ function AppContent() {
         <Route path="/pricing" element={<Pricing />} />
         <Route path="/kolhapur" element={<Navigate to="/city/kolhapur" replace />} />
         <Route path="/city/:slug" element={<CityPage />} />
+        <Route path="/rescue" element={<EmergencyRescue />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/dashboard" element={

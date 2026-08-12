@@ -19,6 +19,44 @@ export interface BookingRequest {
   estimatedCost: number;
   city: string;
   outletType: string;
+  // Deposit (Cashfree) fields — depositStatus "none" means pay-at-spot retained.
+  depositAmount?: number;
+  depositCurrency?: string;
+  depositStatus?: "none" | "pending" | "paid" | "failed";
+  cfOrderId?: string;
+  cfPaymentSessionId?: string;
+  emergency?: boolean;
+}
+
+/** Emergency one-tap booking for Roadside Rescue: 45-minute default slot,
+ * rescuer message, deposit deferred (rider pays at spot on arrival). */
+export async function submitEmergencyBooking(spot: {
+  id: string;
+  name?: string;
+  hostName?: string;
+  hostPhone?: string;
+  city?: string;
+  outletType?: string;
+  pricePerHour?: number;
+}): Promise<string> {
+  const user = auth.currentUser;
+  if (!user) throw new Error("You must be signed in to request roadside rescue.");
+  const duration = 45; // 45-minute rescue slot — enough for a two-wheeler top-up
+  return submitBookingRequest({
+    spotId: spot.id,
+    spotName: spot.name ?? "Charging spot",
+    hostName: spot.hostName ?? "",
+    hostPhone: spot.hostPhone ?? "",
+    userPhone: "",
+    duration,
+    message: "ROADSIDE RESCUE — stranded rider. Heading to your spot now. Please keep the outlet ready.",
+    pricePerHour: Number(spot.pricePerHour) || 0,
+    estimatedCost: Math.round(((Number(spot.pricePerHour) || 0) * duration) / 60 * 100) / 100,
+    city: spot.city ?? "",
+    outletType: spot.outletType ?? "",
+    emergency: true,
+    depositStatus: "none",
+  });
 }
 
 /** Submit a new booking request */
@@ -58,6 +96,12 @@ export async function submitBookingRequest(
     estimatedCost: Math.round((pricePerHour * duration / 60) * 100) / 100,
     city: spot.city || data.city,
     outletType: spot.outletType || data.outletType,
+    emergency: Boolean(data.emergency) || false,
+    depositAmount: Number.isFinite(Number(data.depositAmount)) ? Number(data.depositAmount) : undefined,
+    depositCurrency: data.depositCurrency || undefined,
+    depositStatus: data.depositStatus || (Number.isFinite(Number(data.depositAmount)) && Number(data.depositAmount) > 0 ? "pending" : "none"),
+    cfOrderId: data.cfOrderId || undefined,
+    cfPaymentSessionId: data.cfPaymentSessionId || undefined,
   };
   await set(newRef, bookingPayload);
   await set(ref(database, `spotRequests/${data.spotId}/${newRef.key}`), bookingPayload);
