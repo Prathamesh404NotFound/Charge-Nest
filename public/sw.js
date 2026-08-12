@@ -39,6 +39,14 @@ function isLiveApi(url) {
   return /firebaseio\.com|firebasedatabase\.app|tile\.openstreetmap\.org|tile\.openstreetmap\.de/.test(url);
 }
 
+function isNavigation(request) {
+  return request.mode === "navigate";
+}
+
+function isViteDevRequest(request) {
+  return /\/(@vite|@react-refresh|node_modules|\.tsx?\?t=|__vite|src\/)/.test(request.url) || request.url.includes("?import") || request.url.includes("?direct") || request.url.includes("/src/");
+}
+
 function isImageRequest(request) {
   return request.destination === "image";
 }
@@ -65,6 +73,23 @@ self.addEventListener("fetch", (event) => {
     // Network-first: always prefer the freshest data
     event.respondWith(
       fetch(request).catch(() => caches.match(request))
+    );
+    return;
+  }
+
+  // Never serve a stale app shell: navigation and Vite development assets
+  // (module scripts, HMR, transform endpoints) must always hit the network.
+  // The cached shell only acts as a LAST-resort offline fallback.
+  if (isNavigation(request) || isViteDevRequest(request)) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.ok && !isViteDevRequest(request) && request.url.startsWith(self.location.origin)) {
+            caches.open(CACHE_SHELL).then((cache) => cache.put(request, response.clone()));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request).then((cached) => cached || fallbackPage()))
     );
     return;
   }

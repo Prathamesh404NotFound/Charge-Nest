@@ -30,7 +30,7 @@
       "$spotId": {
         ".read": true,
         ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || (data.exists() && data.child('hostId').val() === auth.uid && newData.child('hostId').val() === data.child('hostId').val()) || (!data.exists() && newData.child('hostId').val() === auth.uid))",
-        ".validate": "newData.hasChildren(['hostId', 'hostName', 'address', 'city', 'state', 'pincode', 'outletType', 'pricePerHour'])"
+        ".validate": "newData.hasChildren(['hostId', 'hostName', 'address', 'city', 'state', 'pincode', 'outletType', 'pricePerHour']) && (!newData.child('hostId').exists() || newData.child('hostId').val() === auth.uid || root.child('admins').child(auth.uid).exists())"
       }
     },
     "spotRequests": {
@@ -38,7 +38,7 @@
         ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || root.child('chargingSpots').child($spotId).child('hostId').val() === auth.uid)",
         "$requestId": {
           ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || root.child('chargingSpots').child($spotId).child('hostId').val() === auth.uid || data.child('userId').val() === auth.uid)",
-          ".write": "auth != null && auth.uid === newData.child('userId').val() && newData.child('spotId').val() === $spotId",
+          ".write": "auth != null && ((auth.uid === newData.child('userId').val() && newData.child('spotId').val() === $spotId && !data.exists()) || (data.exists() && root.child('chargingSpots').child($spotId).child('hostId').val() === auth.uid) || root.child('admins').child(auth.uid).exists())",
           ".validate": "newData.child('userId').val() === auth.uid && newData.child('spotId').val() === $spotId"
         }
       }
@@ -50,6 +50,43 @@
           ".read": "auth != null",
           ".write": "auth != null && auth.uid === newData.child('userId').val()",
           ".validate": "auth.uid === newData.child('userId').val() && newData.child('rating').val() >= 1 && newData.child('rating').val() <= 5"
+        }
+      }
+    },
+    "availability": {
+      "$uid": {
+        ".read": true,
+        "$spotId": {
+          ".read": true,
+          ".write": "auth != null && auth.uid === $uid",
+          "$date": {
+            ".write": "auth != null && auth.uid === $uid",
+            ".validate": "newData.hasChildren(['date', 'open', 'close', 'blocked'])"
+          }
+        }
+      }
+    },
+    "bookingChat": {
+      "$threadId": {
+        ".read": "auth != null && (root.child('bookingChat').child($threadId).child('riderId').val() === auth.uid || root.child('bookingChat').child($threadId).child('hostId').val() === auth.uid || root.child('admins').child(auth.uid).exists())",
+        ".write": "auth != null && auth.uid === newData.child('riderId').val() && !data.exists()",
+        ".validate": "newData.hasChildren(['spotId', 'riderId']) || newData.hasChildren(['riderId'])",
+        "messages": {
+          "$messageId": {
+            ".read": "auth != null && (root.child('bookingChat').child($threadId).child('riderId').val() === auth.uid || root.child('bookingChat').child($threadId).child('hostId').val() === auth.uid || root.child('admins').child(auth.uid).exists())",
+            ".write": "auth != null && auth.uid === newData.child('senderId').val()",
+            ".validate": "newData.hasChildren(['threadId', 'senderId', 'text', 'createdAt']) && newData.child('threadId').val() === $threadId"
+          }
+        }
+      }
+    },
+    "payoutRequests": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        "$requestId": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null && auth.uid === $uid && (!data.exists() || data.child('status').val() === 'paid' || data.child('status').val() === 'rejected')",
+          ".validate": "newData.hasChildren(['amount', 'status', 'requestedAt', 'createdAt']) && newData.child('status').val() === 'pending'"
         }
       }
     },

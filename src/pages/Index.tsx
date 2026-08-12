@@ -9,6 +9,7 @@ import FeatureCard from "@/components/FeatureCard";
 import TestimonialCarousel from "@/components/TestimonialCarousel";
 import FAQAccordion from "@/components/FAQAccordion";
 import CTABanner from "@/components/CTABanner";
+import PlanMyChargeSection from "@/components/PlanMyChargeSection";
 import { useState, useEffect } from "react";
 import { getAllChargingSpots } from "@/lib/hostRegistration";
 import BookingModal from "@/components/BookingModal";
@@ -509,6 +510,7 @@ const Index = () => {
   );
 
   const ctaSection = <CTABanner variant="dark" />;
+  const planMyChargeSection = <PlanMyChargeSection />;
 
   return (
     <div className="overflow-hidden">
@@ -522,6 +524,7 @@ const Index = () => {
       {user ? (
         <>
           {featuredSpotsSection}
+          {planMyChargeSection}
           {statsSection}
           {howItWorksSection}
           {riderBenefitsSection}
@@ -539,6 +542,7 @@ const Index = () => {
           {riderBenefitsSection}
           {hostBenefitsSection}
           {featuredSpotsSection}
+          {planMyChargeSection}
           {electricNightSection}
           {whyChooseUsSection}
           {testimonialsSection}

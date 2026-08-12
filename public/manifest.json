@@ -17,15 +17,47 @@
       "src": "/logo192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
       "src": "/logo512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Roadside Rescue",
+      "short_name": "Rescue",
+      "description": "I'm stranded — find the nearest open charging spot now",
+      "url": "/rescue",
+      "icons": [{ "src": "/logo192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Find Charging Spots",
+      "short_name": "Find Spots",
+      "description": "Browse verified EV charging spots near you",
+      "url": "/spots",
+      "icons": [{ "src": "/logo192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Become a Host",
+      "short_name": "Host",
+      "description": "List your charging outlet and start earning",
+      "url": "/host",
+      "icons": [{ "src": "/logo192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "My Dashboard",
+      "short_name": "Dashboard",
+      "description": "View bookings, earnings, and saved spots",
+      "url": "/dashboard",
+      "icons": [{ "src": "/logo192.png", "sizes": "192x192" }]
     }
   ],
   "screenshots": [],
-  "prefer_related_applications": false
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "iarc_rating_id": ""
 }

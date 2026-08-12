@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getUserBookings, cancelBooking, BookingRequest } from "@/lib/bookingService";
+import ChatPanel from "@/components/ChatPanel";
 import { toast } from "sonner";
 import GoogleLoginModal from "@/components/Auth/GoogleLoginModal";
 import SEO from "@/components/SEO";
@@ -213,6 +214,19 @@ export default function BookingHistory() {
                                 ? <><Loader2 className="w-3 h-3 animate-spin mr-1" />Cancelling...</>
                                 : "Cancel Request"}
                             </Button>
+                          </div>
+                        )}
+
+                        {/* In-app rider–host chat (active bookings only) */}
+                        {booking.status !== "cancelled" && booking.status !== "rejected" && (
+                          <div className="mt-3 border-t border-border pt-3">
+                            <ChatPanel
+                              threadId={booking.id}
+                              peerName={booking.hostName || "Host"}
+                              peerPhone={booking.hostPhone}
+                              spotName={booking.spotName}
+                              compact
+                            />
                           </div>
                         )}
                       </div>

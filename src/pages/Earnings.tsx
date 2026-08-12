@@ -9,11 +9,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getUserProfile } from "@/lib/userService";
 import { getHostEarnings, EarningsSummary } from "@/lib/earningsService";
+import {
+  getHostSpots, getHostSpotStats, hostRespondToRequest,
+  getHostPendingQueue, listenPendingQueue, getHostAvailability,
+  setHostAvailability, getHostPayoutRequests, requestPayout,
+  HostSpot, HostBookingRequest, AvailabilitySlot, PayoutRequest,
+} from "@/lib/hostDashboardService";
+import HostChatInbox from "@/components/HostChatInbox";
 import { toast } from "sonner";
 import GoogleLoginModal from "@/components/Auth/GoogleLoginModal";
 import HostRegistrationModal from "@/components/HostRegistration/HostRegistrationModal";
 import SEO from "@/components/SEO";
 import type { User } from "@/types";
+
+const HOST_TABS = ["Earnings", "Requests", "Calendar", "Chat", "Payouts"] as const;
+type HostTab = (typeof HOST_TABS)[number];
 
 export default function Earnings() {
   const { user } = useAuth() as { user: User | null };
@@ -22,6 +32,59 @@ export default function Earnings() {
   const [loading, setLoading] = useState(true);
   const [showLogin, setShowLogin] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
+
+  // ── Host workspace tabs ──
+  const [hostTab, setHostTab] = useState<HostTab>("Earnings");
+  const [spots, setSpots] = useState<HostSpot[]>([]);
+  const [spotStats, setSpotStats] = useState<Record<string, Awaited<ReturnType<typeof getHostSpotStats>>>>({});
+  const [queue, setQueue] = useState<HostBookingRequest[]>([]);
+  const [calendar, setCalendar] = useState<Record<string, Record<string, AvailabilitySlot>>>({});
+  const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
+  const [hostLoading, setHostLoading] = useState(false);
+  const [responding, setResponding] = useState<string | null>(null);
+  const [requestingPayout, setRequestingPayout] = useState(false);
+
+  useEffect(() => {
+    if (!user || !isHost) return;
+    let disposed = false;
+    (async () => {
+      setHostLoading(true);
+      try {
+        const hostSpots = await getHostSpots(user.id);
+        if (disposed) return;
+        setSpots(hostSpots);
+        const stats: typeof spotStats = {};
+        for (const spot of hostSpots) {
+          stats[spot.id] = await getHostSpotStats(spot);
+        }
+        if (disposed) return;
+        setSpotStats(stats);
+        const q = await getHostPendingQueue(user.id);
+        if (disposed) return;
+        setQueue(q);
+        const cal: typeof calendar = {};
+        for (const spot of hostSpots) {
+          cal[spot.id] = await getHostAvailability(user.id, spot.id);
+        }
+        if (disposed) return;
+        setCalendar(cal);
+        setPayouts(await getHostPayoutRequests(user.id));
+      } catch {
+        toast.error("Failed to load host workspace");
+      } finally {
+        if (!disposed) setHostLoading(false);
+      }
+    })();
+    // live queue refresh while on Requests tab
+    let unsubQueue: (() => void) | undefined;
+    if (hostTab === "Requests") {
+      getHostSpots(user.id).then(s => {
+        if (disposed) return;
+        unsubQueue = listenPendingQueue(user.id, s, setQueue);
+      });
+    }
+    return () => { disposed = true; unsubQueue?.(); };
+  }, [user, isHost, hostTab]);
 
   useEffect(() => {
     if (!user) { setLoading(false); return; }
@@ -65,6 +128,10 @@ export default function Earnings() {
     </div>
   );
 
+  const dueForPayout = summary
+    ? Math.max(0, Math.round(summary.totalEarned - (payouts.filter(p => p.status === "paid").reduce((s, p) => s + p.amount, 0) || 0)) * 100) / 100
+    : 0;
+
   if (!isHost) return (
     <div className="pt-24 pb-16">
       <div className="container mx-auto px-4 max-w-2xl">
@@ -106,6 +173,212 @@ export default function Earnings() {
             <p className="text-muted-foreground text-sm">Revenue from your charging spots</p>
           </div>
         </div>
+
+        {/* Host workspace tabs */}
+        <div className="flex flex-wrap items-center gap-1.5 mb-6 p-1 rounded-xl bg-muted/60 border border-border w-fit">
+          {HOST_TABS.map(tab => {
+            const badge = tab === "Requests" && queue.length > 0 ? queue.length : null;
+            return (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setHostTab(tab)}
+                className={`relative px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  hostTab === tab
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tab}
+                {badge ? (
+                  <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                    {badge > 9 ? "9+" : badge}
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+
+        {hostLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          </div>
+        ) : hostTab === "Requests" ? (
+          <div className="mb-8">
+            {queue.length === 0 ? (
+              <Card>
+                <CardContent className="py-14 text-center">
+                  <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                  <p className="font-medium text-foreground mb-1">No pending requests</p>
+                  <p className="text-sm text-muted-foreground">When a rider books your spot, the request appears here with one-tap Accept, Complete, or Reject actions.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {queue.map(req => (
+                  <Card key={req.id} className="overflow-hidden">
+                    <CardContent className="p-4 flex flex-wrap items-center gap-4">
+                      <div className="flex items-center gap-3 flex-1 min-w-56">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${req.emergency ? "bg-red-100 dark:bg-red-900/30" : "bg-blue-100 dark:bg-blue-900/30"}`}>
+                          {req.emergency ? <Zap className="w-5 h-5 text-red-600" /> : <Clock className="w-5 h-5 text-blue-600" />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-foreground flex items-center gap-2">
+                            {req.userName || "Rider"}
+                            {req.emergency ? <span className="text-[10px] font-bold uppercase tracking-wide text-red-600 border border-red-200 rounded-full px-1.5">Rescue</span> : null}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {req.spotName} · {req.duration ?? 0} min · {formatDate(req.requestedAt)}
+                            {req.depositStatus === "paid" ? " · deposit paid" : ""}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {req.status !== "completed" && (
+                          <>
+                            <Button size="sm" variant="outline" className="border-red-200 text-red-600 hover:bg-red-50"
+                              disabled={responding === req.id}
+                              onClick={() => { setResponding(req.id); hostRespondToRequest(req.spotId, req.id, req.userId, "rejected").then(() => { setQueue(prev => prev.filter(r => r.id !== req.id)); toast.success("Request rejected"); }).catch(() => toast.error("Could not reject")).finally(() => setResponding(null)); }}>
+                              Reject
+                            </Button>
+                            <Button size="sm" variant="outline"
+                              disabled={responding === req.id}
+                              onClick={() => { setResponding(req.id); hostRespondToRequest(req.spotId, req.id, req.userId, "approved").then(() => { setQueue(prev => prev.map(r => r.id === req.id ? { ...r, status: "approved" } : r)); toast.success("Request approved"); }).catch(() => toast.error("Could not approve")).finally(() => setResponding(null)); }}>
+                              {req.status === "approved" ? "Approved" : "Approve"}
+                            </Button>
+                            <Button size="sm" className="gradient-green hover:opacity-90"
+                              disabled={responding === req.id}
+                              onClick={() => { setResponding(req.id); hostRespondToRequest(req.spotId, req.id, req.userId, "completed").then(() => { setQueue(prev => prev.filter(r => r.id !== req.id)); toast.success("Session marked complete — earnings logged"); }).catch(() => toast.error("Could not complete")).finally(() => setResponding(null)); }}>
+                              {responding === req.id ? <Loader2 className="w-3 h-3 animate-spin" /> : "Mark Complete"}
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : hostTab === "Calendar" ? (
+          <div className="mb-8 space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-primary" />Availability Calendar
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {spots.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No spots yet. Register a spot to manage its calendar.</p>
+                ) : (
+                  <div className="space-y-6">
+                    {spots.map(spot => (
+                      <div key={spot.id}>
+                        <p className="text-sm font-medium text-foreground mb-2">{spot.name}</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {Array.from({ length: 14 }).map((_, i) => {
+                            const d = new Date();
+                            d.setDate(d.getDate() + i);
+                            const key = d.toISOString().slice(0, 10);
+                            const slot = calendar[spot.id]?.[key];
+                            const blocked = slot?.blocked;
+                            return (
+                              <button
+                                key={key}
+                                type="button"
+                                aria-label={`Toggle ${key}`}
+                                onClick={async () => {
+                                  const current = { ...calendar };
+                                  const spotCal = { ...current[spot.id] };
+                                  const was = spotCal[key];
+                                  spotCal[key] = {
+                                    date: key,
+                                    open: was?.open ?? "09:00",
+                                    close: was?.close ?? "21:00",
+                                    blocked: !was?.blocked,
+                                  };
+                                  current[spot.id] = spotCal;
+                                  setCalendar(current);
+                                  try {
+                                    await setHostAvailability(user!.id, spot.id, spotCal);
+                                    toast.success(blocked ? "Day reopened" : "Day blocked");
+                                  } catch {
+                                    toast.error("Could not save calendar");
+                                  }
+                                }}
+                                className={`h-11 w-11 rounded-lg text-[11px] font-medium border transition-colors ${
+                                  blocked
+                                    ? "bg-red-100 border-red-300 text-red-700 dark:bg-red-900/30 dark:border-red-800 dark:text-red-300"
+                                    : "bg-card border-border text-foreground hover:border-primary"
+                                }`}
+                              >
+                                {d.getDate()}
+                                {blocked ? "\u00D7" : null}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-1.5">
+                          Tap a day to block it (riders cannot book blocked days). Next 14 days shown; default open hours 9:00–21:00.
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        ) : hostTab === "Chat" ? (
+          <div className="mb-8">
+            <HostChatInbox />
+          </div>
+        ) : hostTab === "Payouts" ? (
+          <div className="mb-8 space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <Card><CardContent className="p-4">
+                <p className="text-xs text-muted-foreground mb-1">Total Earned</p>
+                <p className="text-2xl font-bold text-green-600">₹{summary?.totalEarned ?? 0}</p>
+              </CardContent></Card>
+              <Card><CardContent className="p-4">
+                <p className="text-xs text-muted-foreground mb-1">Already Paid Out</p>
+                <p className="text-2xl font-bold text-foreground">₹{payouts.filter(p => p.status === "paid").reduce((s, p) => s + p.amount, 0)}</p>
+              </CardContent></Card>
+              <Card><CardContent className="p-4">
+                <p className="text-xs text-muted-foreground mb-1">Due Now</p>
+                <p className="text-2xl font-bold text-primary">₹{dueForPayout}</p>
+              </CardContent></Card>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button className="gradient-green hover:opacity-90" disabled={requestingPayout || dueForPayout <= 0}
+                onClick={() => { setRequestingPayout(true); requestPayout(user!.id, dueForPayout).then(async () => { setPayouts(await getHostPayoutRequests(user!.id)); toast.success("Payout requested — admin will review it"); }).catch((e: any) => toast.error(String(e?.message || "Could not request payout"))).finally(() => setRequestingPayout(false)); }}>
+                {requestingPayout ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}Request Payout of ₹{dueForPayout}
+              </Button>
+              <p className="text-xs text-muted-foreground">After admin marks your payout as paid, earnings reset from the due amount.</p>
+            </div>
+            <Card>
+              <CardHeader><CardTitle className="text-base">Payout History</CardTitle></CardHeader>
+              <CardContent>
+                {payouts.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-6 text-center">No payout requests yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {payouts.map(p => (
+                      <div key={p.id} className="flex items-center justify-between p-3 rounded-xl border border-border">
+                        <div className="flex items-center gap-3">
+                          <span className={`w-2.5 h-2.5 rounded-full ${p.status === "paid" ? "bg-green-500" : p.status === "processing" ? "bg-blue-500" : p.status === "rejected" ? "bg-red-400" : "bg-amber-400"}`} />
+                          <p className="text-sm text-foreground">₹{p.amount} · {formatDate(p.createdAt)}</p>
+                        </div>
+                        <span className="text-xs font-medium capitalize text-muted-foreground">{p.status}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        ) : null}
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">

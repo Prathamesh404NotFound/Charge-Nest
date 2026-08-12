@@ -13,30 +13,36 @@ import AdminRoute from "@/components/Admin/AdminRoute";
 import AuthenticatedRoute from "@/components/AuthenticatedRoute";
 import AdminLayoutPage from "@/components/Admin/AdminLayoutPage";
 import { AuthProvider, useAuth } from "@/components/Auth/AuthProvider";
-import Index from "./pages/Index";
-import FindSpots from "./pages/FindSpots";
-import BecomeHost from "./pages/BecomeHost";
-import HowItWorks from "./pages/HowItWorks";
-import Pricing from "./pages/Pricing";
-import CityKolhapur from "./pages/CityKolhapur";
-import CityPage from "./pages/CityPage";
-import EmergencyRescue from "./pages/EmergencyRescue";
-import About from "./pages/About";
-import Contact from "./pages/Contact";
-import Dashboard from "./pages/Dashboard";
-import BookingHistory from "./pages/BookingHistory";
-import Earnings from "./pages/Earnings";
-import Settings from "./pages/Settings";
-import SavedSpots from "./pages/SavedSpots";
+import { LazyPage } from "@/components/LazyPage";
 import NotFound from "./pages/NotFound";
-import AdminDashboardPage from "./pages/Admin/AdminDashboardPage";
-import AdminUsersPage from "./pages/Admin/AdminUsersPage";
-import AdminSpotsPage from "./pages/Admin/AdminSpotsPage";
-import AdminRequestsPage from "./pages/Admin/AdminRequestsPage";
-import AdminAnalyticsPage from "./pages/Admin/AdminAnalyticsPage";
-import AdminPayoutsPage from "./pages/Admin/AdminPayoutsPage";
-import AdminGovernmentStationsPage from "./pages/Admin/AdminGovernmentStationsPage";
 import '@/styles/responsive.css';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Route-level code splitting: each page below loads on demand so the initial
+// JS bundle stays small. The heavy admin section gets its own chunks that
+// only load for /admin routes.
+// ─────────────────────────────────────────────────────────────────────────────
+const lazyIndex = () => import("./pages/Index");
+const lazyFindSpots = () => import("./pages/FindSpots");
+const lazyBecomeHost = () => import("./pages/BecomeHost");
+const lazyHowItWorks = () => import("./pages/HowItWorks");
+const lazyPricing = () => import("./pages/Pricing");
+const lazyCityPage = () => import("./pages/CityPage");
+const lazyEmergencyRescue = () => import("./pages/EmergencyRescue");
+const lazyAbout = () => import("./pages/About");
+const lazyContact = () => import("./pages/Contact");
+const lazyDashboard = () => import("./pages/Dashboard");
+const lazyBookingHistory = () => import("./pages/BookingHistory");
+const lazyEarnings = () => import("./pages/Earnings");
+const lazySettings = () => import("./pages/Settings");
+const lazySavedSpots = () => import("./pages/SavedSpots");
+const lazyAdminDashboard = () => import("./pages/Admin/AdminDashboardPage");
+const lazyAdminUsers = () => import("./pages/Admin/AdminUsersPage");
+const lazyAdminSpots = () => import("./pages/Admin/AdminSpotsPage");
+const lazyAdminRequests = () => import("./pages/Admin/AdminRequestsPage");
+const lazyAdminAnalytics = () => import("./pages/Admin/AdminAnalyticsPage");
+const lazyAdminPayouts = () => import("./pages/Admin/AdminPayoutsPage");
+const lazyAdminGovStations = () => import("./pages/Admin/AdminGovernmentStationsPage");
 
 const queryClient = new QueryClient();
 
@@ -81,48 +87,48 @@ function AppContent() {
       {!isAdmin && <Navbar />}
       <Routes>
         {/* Public Routes */}
-        <Route path="/" element={<Index />} />
-        <Route path="/spots" element={<FindSpots />} />
-        <Route path="/host" element={<BecomeHost />} />
-        <Route path="/how-it-works" element={<HowItWorks />} />
-        <Route path="/pricing" element={<Pricing />} />
+        <Route path="/" element={<LazyPage load={lazyIndex} />} />
+        <Route path="/spots" element={<LazyPage load={lazyFindSpots} />} />
+        <Route path="/host" element={<LazyPage load={lazyBecomeHost} />} />
+        <Route path="/how-it-works" element={<LazyPage load={lazyHowItWorks} />} />
+        <Route path="/pricing" element={<LazyPage load={lazyPricing} />} />
         <Route path="/kolhapur" element={<Navigate to="/city/kolhapur" replace />} />
-        <Route path="/city/:slug" element={<CityPage />} />
-        <Route path="/rescue" element={<EmergencyRescue />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/contact" element={<Contact />} />
+        <Route path="/city/:slug" element={<LazyPage load={lazyCityPage} />} />
+        <Route path="/rescue" element={<LazyPage load={lazyEmergencyRescue} />} />
+        <Route path="/about" element={<LazyPage load={lazyAbout} />} />
+        <Route path="/contact" element={<LazyPage load={lazyContact} />} />
         <Route path="/dashboard" element={
           <AuthenticatedRoute>
             <main className="min-h-screen pt-24 responsive-container container-lg">
-              <Dashboard />
+              <LazyPage load={lazyDashboard} />
             </main>
           </AuthenticatedRoute>
         } />
         <Route path="/dashboard/bookings" element={
           <AuthenticatedRoute>
             <main className="min-h-screen pt-24 responsive-container container-lg">
-              <BookingHistory />
+              <LazyPage load={lazyBookingHistory} />
             </main>
           </AuthenticatedRoute>
         } />
         <Route path="/dashboard/earnings" element={
           <AuthenticatedRoute>
             <main className="min-h-screen pt-24 responsive-container container-lg">
-              <Earnings />
+              <LazyPage load={lazyEarnings} />
             </main>
           </AuthenticatedRoute>
         } />
         <Route path="/dashboard/settings" element={
           <AuthenticatedRoute>
             <main className="min-h-screen pt-24 responsive-container container-lg">
-              <Settings />
+              <LazyPage load={lazySettings} />
             </main>
           </AuthenticatedRoute>
         } />
         <Route path="/saved" element={
           <AuthenticatedRoute>
             <main className="min-h-screen pt-24 responsive-container container-lg">
-              <SavedSpots />
+              <LazyPage load={lazySavedSpots} />
             </main>
           </AuthenticatedRoute>
         } />
@@ -133,14 +139,14 @@ function AppContent() {
             <AdminLayoutPage />
           </AdminRoute>
         }>
-          <Route index element={<AdminDashboardPage />} />
-          <Route path="users" element={<AdminUsersPage />} />
-          <Route path="spots" element={<AdminSpotsPage />} />
-          <Route path="government-stations" element={<AdminGovernmentStationsPage />} />
-          <Route path="requests" element={<AdminRequestsPage />} />
-          <Route path="analytics" element={<AdminAnalyticsPage />} />
-          <Route path="payouts" element={<AdminPayoutsPage />} />
-          <Route path="settings" element={<AdminDashboardPage />} />
+          <Route index element={<LazyPage load={lazyAdminDashboard} />} />
+          <Route path="users" element={<LazyPage load={lazyAdminUsers} />} />
+          <Route path="spots" element={<LazyPage load={lazyAdminSpots} />} />
+          <Route path="government-stations" element={<LazyPage load={lazyAdminGovStations} />} />
+          <Route path="requests" element={<LazyPage load={lazyAdminRequests} />} />
+          <Route path="analytics" element={<LazyPage load={lazyAdminAnalytics} />} />
+          <Route path="payouts" element={<LazyPage load={lazyAdminPayouts} />} />
+          <Route path="settings" element={<LazyPage load={lazyAdminDashboard} />} />
         </Route>
 
         {/* 404 Route */}
