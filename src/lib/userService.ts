@@ -61,11 +61,19 @@ export async function getUserProfile(uid: string): Promise<UserProfile> {
   return { ...defaults, uid } as UserProfile;
 }
 
-/** Partial update of user profile fields */
+/** Update only mutable profile fields owned by the authenticated user. */
 export async function updateUserProfile(uid: string, data: Partial<UserProfile>) {
-  const userRef = ref(database, `users/${uid}`);
-  const { uid: _omit, ...rest } = data as any;
-  await update(userRef, { ...rest, updatedAt: serverTimestamp() });
+  if (!auth.currentUser || auth.currentUser.uid !== uid) {
+    throw new Error("You can only update your own profile.");
+  }
+
+  const allowed: Partial<UserProfile> = {};
+  if (typeof data.displayName === "string") allowed.displayName = data.displayName.trim().slice(0, 80);
+  if (typeof data.phone === "string") allowed.phone = data.phone.trim().slice(0, 30);
+  if (data.photoURL === undefined || typeof data.photoURL === "string") allowed.photoURL = data.photoURL;
+  if (data.preferences) allowed.preferences = data.preferences;
+
+  await update(ref(database, `users/${uid}`), { ...allowed, updatedAt: serverTimestamp() });
 }
 
 /** Update notification preferences */
@@ -74,5 +82,8 @@ export async function updateNotificationPrefs(
   prefs: UserProfile["preferences"]["notifications"]
 ) {
   const prefRef = ref(database, `users/${uid}/preferences/notifications`);
+  if (!auth.currentUser || auth.currentUser.uid !== uid) {
+    throw new Error("You can only update your own notification preferences.");
+  }
   await set(prefRef, prefs);
 }

@@ -177,6 +177,39 @@ const AdminDashboardPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Operations focus */}
+        <Card className="overflow-hidden border-primary/15 bg-gradient-to-br from-primary/[0.08] via-card to-card">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-primary">
+                  <Activity className="h-3.5 w-3.5" />
+                  Operations focus
+                </div>
+                <h2 className="text-lg font-semibold tracking-tight">Keep the network moving</h2>
+                <p className="mt-1 max-w-xl text-sm leading-6 text-muted-foreground">Prioritise approvals, spot quality, and rider response time from one focused workspace.</p>
+              </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:min-w-[560px]">
+                <Link to="/admin/requests" className="group rounded-xl border border-border/80 bg-background/70 p-3 transition-colors hover:border-primary/30 hover:bg-background">
+                  <div className="flex items-center justify-between gap-3"><span className="text-xs font-medium text-muted-foreground">Needs review</span><Clock className="h-4 w-4 text-amber-500" /></div>
+                  <div className="mt-2 text-xl font-bold">{stats.pendingRequests.toLocaleString()}</div>
+                  <div className="mt-1 text-xs text-primary group-hover:underline">Open queue →</div>
+                </Link>
+                <Link to="/admin/spots" className="group rounded-xl border border-border/80 bg-background/70 p-3 transition-colors hover:border-primary/30 hover:bg-background">
+                  <div className="flex items-center justify-between gap-3"><span className="text-xs font-medium text-muted-foreground">Live inventory</span><MapPin className="h-4 w-4 text-primary" /></div>
+                  <div className="mt-2 text-xl font-bold">{stats.totalSpots.toLocaleString()}</div>
+                  <div className="mt-1 text-xs text-primary group-hover:underline">Manage spots →</div>
+                </Link>
+                <Link to="/admin/analytics" className="group rounded-xl border border-border/80 bg-background/70 p-3 transition-colors hover:border-primary/30 hover:bg-background">
+                  <div className="flex items-center justify-between gap-3"><span className="text-xs font-medium text-muted-foreground">Platform pulse</span><BarChart3 className="h-4 w-4 text-emerald-500" /></div>
+                  <div className="mt-2 text-xl font-bold">{stats.activeUsers.toLocaleString()}</div>
+                  <div className="mt-1 text-xs text-primary group-hover:underline">View insights →</div>
+                </Link>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Stats Cards */}
         <ResponsiveGrid
           cols={{ default: 1, sm: 2, lg: 2, xl: 4 }}

@@ -245,3 +245,71 @@
   66% { transform: translate(-20px, 20px) scale(0.9); }
   100% { transform: translate(0px, 0px) scale(1); }
 }
+
+
+/* VoltSetu product polish layer */
+@layer base {
+  :root {
+    --shadow-soft: 0 12px 30px hsl(228 40% 16% / 0.08);
+    --shadow-lift: 0 20px 50px hsl(228 40% 16% / 0.14);
+  }
+
+  body {
+    min-width: 320px;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.18);
+    color: hsl(var(--foreground));
+  }
+
+  :focus-visible {
+    outline: 3px solid hsl(var(--ring) / 0.45);
+    outline-offset: 3px;
+  }
+}
+
+@layer components {
+  .surface-card {
+    @apply rounded-2xl border border-border bg-card;
+    box-shadow: var(--shadow-soft);
+  }
+
+  .surface-card-interactive {
+    @apply surface-card transition-all duration-300;
+  }
+
+  .surface-card-interactive:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lift);
+    border-color: hsl(var(--primary) / 0.28);
+  }
+
+  .section-kicker {
+    @apply inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-primary;
+  }
+
+  .page-shell {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .gradient-hero { background: linear-gradient(160deg, hsl(228 40% 16%) 0%, hsl(217 60% 25%) 72%, hsl(228 40% 16%) 100%); }
+}
+
+.dark .glass { @apply bg-card/80 border-white/10; }
+.dark .surface-card { box-shadow: 0 18px 50px hsl(0 0% 0% / 0.2); }
+

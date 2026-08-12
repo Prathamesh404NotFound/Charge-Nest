@@ -20,7 +20,7 @@ export function useAdminAuth() {
   };
 }
 
-export function requireAdminAuth() {
+export function useRequireAdminAuth() {
   const { isAuthorized, isAdmin, loading } = useAdminAuth();
 
   if (loading) {

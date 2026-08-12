@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,7 +17,8 @@ import {
   Bell,
   HelpCircle,
   ChevronDown,
-  Building
+  Building,
+  Search
 } from 'lucide-react';
 import { useAuth } from '@/components/Auth/AuthProvider';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -77,7 +78,9 @@ const adminNavigation = [
 
 const AdminLayoutPage: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [quickFind, setQuickFind] = useState('');
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
@@ -99,11 +102,10 @@ const AdminLayoutPage: React.FC = () => {
   };
 
   const isActiveRoute = (path: string) => {
-    if (path === '/admin') {
-      return location.pathname === '/admin';
-    }
+    if (path === '/admin') return location.pathname === '/admin';
     return location.pathname.startsWith(path);
   };
+  const activeNavItem = adminNavigation.find((item) => isActiveRoute(item.href));
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -143,10 +145,11 @@ const AdminLayoutPage: React.FC = () => {
                 to={item.href}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-muted",
-                  location.pathname === item.href
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground"
+                  isActiveRoute(item.href)
+                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
+                aria-current={isActiveRoute(item.href) ? 'page' : undefined}
               >
                 <item.icon className="w-4 h-4" />
                 <span>{item.title}</span>
@@ -155,7 +158,11 @@ const AdminLayoutPage: React.FC = () => {
           </nav>
 
           {/* Sidebar Footer */}
-          <div className="p-4 border-t border-border">
+          <div className="space-y-2 border-t border-border p-4">
+            <Link to="/" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+              <Home className="h-4 w-4" />
+              <span>View public site</span>
+            </Link>
             <div className="flex items-center gap-3 px-3 py-2">
               <Avatar className="w-8 h-8">
                 <AvatarFallback>
@@ -191,7 +198,39 @@ const AdminLayoutPage: React.FC = () => {
               <Menu className="w-4 h-4" />
             </Button>
 
-            <div className="flex-1" />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <p className="truncate text-sm font-semibold text-foreground">{activeNavItem?.title || 'Operations Center'}</p>
+                <span className="hidden rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600 sm:inline-flex">Live</span>
+              </div>
+              <p className="hidden truncate text-xs text-muted-foreground sm:block">{activeNavItem?.description || 'Monitor and manage the VoltSetu network'}</p>
+            </div>
+
+            <form
+              className="hidden items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-1.5 md:flex"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const query = quickFind.trim().toLowerCase();
+                const target = adminNavigation.find((item) => item.title.toLowerCase().includes(query));
+                if (target) { navigate(target.href); setQuickFind(''); }
+              }}
+            >
+              <Search className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+              <input
+                value={quickFind}
+                onChange={(event) => setQuickFind(event.target.value)}
+                placeholder="Quick find…"
+                aria-label="Quick find admin section"
+                className="w-28 bg-transparent text-xs outline-none placeholder:text-muted-foreground/70 lg:w-36"
+              />
+              <kbd className="hidden rounded border border-border bg-background px-1.5 py-0.5 text-[10px] text-muted-foreground lg:inline">Enter</kbd>
+            </form>
+
+            <Button variant="ghost" size="sm" className="hidden gap-2 text-muted-foreground xl:inline-flex" aria-label="View notifications">
+              <Bell className="h-4 w-4" />
+              <span className="text-xs">Alerts</span>
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+            </Button>
 
             {/* User Menu */}
             <DropdownMenu>

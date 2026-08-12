@@ -41,7 +41,7 @@ const AdminRoute: React.FC<AdminRouteProps> = ({
             </p>
           </div>
           <Button asChild className="w-full">
-            <Link to="/login?redirect=${encodeURIComponent(location.pathname)}">
+            <Link to={`/login?redirect=${encodeURIComponent(location.pathname)}`}>
               Sign In
             </Link>
           </Button>

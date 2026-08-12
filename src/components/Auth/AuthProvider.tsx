@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { auth, googleProvider, database } from "@/lib/firebase-services";
 import {
   signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
   User as FirebaseUser
@@ -15,8 +17,9 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   loginWithGoogle: () => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  updateUserRole: (role: User['role']) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -174,6 +177,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const login = async (email: string, password: string) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || password.length < 6) {
+      throw new Error("Enter a valid email and a password with at least 6 characters.");
+    }
+    try {
+      await signInWithEmailAndPassword(auth, normalizedEmail, password);
+    } catch (error: any) {
+      throw new Error(error?.code === "auth/invalid-credential" ? "Email or password is incorrect." : error?.message || "Sign-in failed. Please try again.");
+    }
+  };
+
+  const signup = async (email: string, password: string) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || password.length < 6) {
+      throw new Error("Enter a valid email and a password with at least 6 characters.");
+    }
+    try {
+      await createUserWithEmailAndPassword(auth, normalizedEmail, password);
+    } catch (error: any) {
+      throw new Error(error?.code === "auth/email-already-in-use" ? "An account with this email already exists." : error?.message || "Account creation failed. Please try again.");
+    }
+  };
+
   const logout = async () => {
     try {
       if (Capacitor.isNativePlatform()) {
@@ -185,23 +212,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateUserRole = async (role: User['role']) => {
-    if (!user) {
-      throw new Error("User not logged in");
-    }
-
-    try {
-      const userRef = ref(database, `users/${user.id}`);
-      await update(userRef, { role });
-
-      setUser(prev => prev ? { ...prev, role } : null);
-    } catch (error) {
-      throw new Error("Failed to update user role");
-    }
-  };
 
   return (
-    <AuthContext.Provider value={{ user, loading, loginWithGoogle, logout, updateUserRole }}>
+    <AuthContext.Provider value={{ user, loading, loginWithGoogle, login, signup, logout }}>
       {children}
     </AuthContext.Provider>
   );

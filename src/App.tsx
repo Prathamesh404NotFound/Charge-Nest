@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
@@ -11,7 +11,7 @@ import Footer from "@/components/Footer";
 import FloatingButtons from "@/components/FloatingButtons";
 import AdminRoute from "@/components/Admin/AdminRoute";
 import AdminLayoutPage from "@/components/Admin/AdminLayoutPage";
-import { AuthProvider } from "@/components/Auth/AuthProvider";
+import { AuthProvider, useAuth } from "@/components/Auth/AuthProvider";
 import Index from "./pages/Index";
 import FindSpots from "./pages/FindSpots";
 import BecomeHost from "./pages/BecomeHost";
@@ -40,6 +40,20 @@ function ScrollToTop() {
     window.scrollTo(0, 0);
   }, [pathname]);
   return null;
+}
+
+function AuthenticatedRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center" aria-live="polite">Loading your account…</div>;
+  }
+
+  if (!user) {
+    return <Navigate to="/" replace state={{ authRequired: true }} />;
+  }
+
+  return <>{children}</>;
 }
 
 function AppContent() {
@@ -82,24 +96,32 @@ function AppContent() {
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/dashboard" element={
-          <main className="min-h-screen pt-24 responsive-container container-lg">
-            <Dashboard />
-          </main>
+          <AuthenticatedRoute>
+            <main className="min-h-screen pt-24 responsive-container container-lg">
+              <Dashboard />
+            </main>
+          </AuthenticatedRoute>
         } />
         <Route path="/dashboard/bookings" element={
-          <main className="min-h-screen pt-24 responsive-container container-lg">
-            <BookingHistory />
-          </main>
+          <AuthenticatedRoute>
+            <main className="min-h-screen pt-24 responsive-container container-lg">
+              <BookingHistory />
+            </main>
+          </AuthenticatedRoute>
         } />
         <Route path="/dashboard/earnings" element={
-          <main className="min-h-screen pt-24 responsive-container container-lg">
-            <Earnings />
-          </main>
+          <AuthenticatedRoute>
+            <main className="min-h-screen pt-24 responsive-container container-lg">
+              <Earnings />
+            </main>
+          </AuthenticatedRoute>
         } />
         <Route path="/dashboard/settings" element={
-          <main className="min-h-screen pt-24 responsive-container container-lg">
-            <Settings />
-          </main>
+          <AuthenticatedRoute>
+            <main className="min-h-screen pt-24 responsive-container container-lg">
+              <Settings />
+            </main>
+          </AuthenticatedRoute>
         } />
 
         {/* Admin Routes */}
@@ -138,7 +160,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <ScrollToTop />
-          <div className="min-h-screen">
+          <div id="main-content" className="min-h-screen">
             <AppContent />
           </div>
         </BrowserRouter>

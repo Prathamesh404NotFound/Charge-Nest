@@ -62,7 +62,7 @@ export async function submitHostRegistration(data: HostRegistrationInput) {
     pricePerHour: data.pricePerHour,
     coordinates,
     agreeToTerms: data.agreeToTerms,
-    status: "approved", // auto-approve for MVP
+    status: "pending",
     createdAt: serverTimestamp(),
     googleMapsLink: data.googleMapsLink || "",
   };
@@ -72,54 +72,11 @@ export async function submitHostRegistration(data: HostRegistrationInput) {
   const newRegistrationRef = push(userRegistrationsRef);
   await set(newRegistrationRef, registrationData);
 
-  // Also create a charging spot entry
-  const spotData = {
-    hostId: user.uid,
-    hostName: data.fullName,
-    hostEmail: data.email,
-    hostPhone: data.phone,
-    name: `${data.fullName}'s Charging Spot`,
-    description: `Charging spot in ${data.city}, ${data.state}. ${data.outletType} outlet available.`,
-    address: data.address,
-    city: data.city,
-    state: data.state,
-    pincode: data.pincode,
-    coordinates,
-    category: "home",
-    outletType: data.outletType,
-    chargingSpeed: data.chargingSpeed,
-    availableHours: data.availableHours,
-    pricePerHour: parseFloat(data.pricePerHour) || 0,
-    pricePerMinute: (parseFloat(data.pricePerHour) || 0) / 60,
-    amenities: [
-      { id: "1", name: "Power Backup", icon: "battery", available: true },
-      { id: "2", name: "Security", icon: "shield", available: true },
-    ],
-    rating: 0,
-    reviews: [],
-    totalCharges: 0,
-    status: "active", // auto-approve for MVP
-    isVerified: true, // auto-verify for MVP
-    isFeatured: false,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-    googleMapsLink: data.googleMapsLink || "",
-  };
-
-  const spotsRef = ref(database, "chargingSpots");
-  const newSpotRef = push(spotsRef);
-  await set(newSpotRef, spotData);
-
-  // Mark the user's role as host
-  const userRef = ref(database, `users/${user.uid}`);
-  await update(userRef, {
-    role: "host",
-    updatedAt: serverTimestamp(),
-  });
+  // Listings are created only after an administrator reviews the registration.
+  // Never self-promote the account or publish an unverified spot from the client.
 
   return {
     registrationId: newRegistrationRef.key,
-    spotId: newSpotRef.key,
     success: true,
   };
 }
@@ -200,23 +157,61 @@ export async function updateRegistrationStatus(
       ...(reason && { rejectionReason: reason }),
     });
 
-    // Also update the corresponding spot status
-    const spotsRef = ref(database, "chargingSpots");
-    const spotsSnapshot = await get(spotsRef);
-    if (spotsSnapshot.exists()) {
-      const spots = spotsSnapshot.val();
-      const spotEntry = Object.entries(spots).find(
-        ([, spot]: [string, any]) => spot.hostId === userId && spot.status === "pending"
-      );
-      if (spotEntry) {
-        const [spotId] = spotEntry;
-        const spotRef = ref(database, `chargingSpots/${spotId}`);
-        await update(spotRef, {
-          status: status === "approved" ? "active" : "rejected",
+    if (status === "approved") {
+      const registrationSnapshot = await get(registrationRef);
+      const registration = registrationSnapshot.val();
+      if (!registration) throw new Error("Host registration was not found");
+
+      const spotsRef = ref(database, "chargingSpots");
+      const spotsSnapshot = await get(spotsRef);
+      const existingSpot = spotsSnapshot.exists()
+        ? Object.values(spotsSnapshot.val()).some((spot: any) => spot.hostId === userId && spot.registrationId === registrationId)
+        : false;
+
+      if (!existingSpot) {
+        const newSpotRef = push(spotsRef);
+        await set(newSpotRef, {
+          registrationId,
+          hostId: userId,
+          hostName: registration.fullName,
+          hostEmail: registration.email,
+          hostPhone: registration.phone,
+          name: `${registration.fullName}'s Charging Spot`,
+          description: `Charging spot in ${registration.city}, ${registration.state}. ${registration.outletType} outlet available.`,
+          address: registration.address,
+          city: registration.city,
+          state: registration.state,
+          pincode: registration.pincode,
+          coordinates: registration.coordinates || null,
+          category: "home",
+          outletType: registration.outletType,
+          chargingSpeed: registration.chargingSpeed,
+          availableHours: registration.availableHours,
+          pricePerHour: Number.parseFloat(registration.pricePerHour) || 0,
+          pricePerMinute: (Number.parseFloat(registration.pricePerHour) || 0) / 60,
+          amenities: [],
+          rating: 0,
+          reviews: [],
+          totalCharges: 0,
+          status: "active",
+          isVerified: true,
+          isFeatured: false,
+          createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
-          isVerified: status === "approved",
+          googleMapsLink: registration.googleMapsLink || "",
         });
       }
+
+      await update(ref(database, `users/${userId}`), {
+        role: "host",
+        hostStatus: "approved",
+        updatedAt: serverTimestamp(),
+      });
+    } else {
+      await update(ref(database, `users/${userId}`), {
+        hostStatus: "rejected",
+        updatedAt: serverTimestamp(),
+      });
     }
     return true;
   } catch (error) {

@@ -63,7 +63,11 @@ export default function Navbar() {
   }, [user]);
 
   return (
-    <header
+    <>
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-card focus:px-4 focus:py-3 focus:text-sm focus:font-semibold focus:text-foreground focus:shadow-xl">
+        Skip to main content
+      </a>
+      <header
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
         scrolled
@@ -90,9 +94,10 @@ export default function Navbar() {
               className={cn(
                 "px-3 lg:px-2.5 xl:px-4 py-2 rounded-lg text-sm lg:text-[13px] xl:text-sm font-medium transition-all duration-200 hover:bg-primary/10 hover:text-primary",
                 location.pathname === link.to
-                  ? "text-primary bg-primary/10"
+                  ? "text-primary bg-primary/10 shadow-sm"
                   : "text-muted-foreground"
               )}
+              aria-current={location.pathname === link.to ? "page" : undefined}
             >
               {link.label}
             </Link>
@@ -134,7 +139,9 @@ export default function Navbar() {
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
           className="lg:hidden p-2 rounded-lg hover:bg-muted transition-colors"
-          aria-label="Toggle menu"
+          aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
+          aria-expanded={mobileOpen}
+          aria-controls="mobile-navigation"
         >
           {mobileOpen ? <X className="w-5 h-5 sm:w-6 sm:h-6" /> : <Menu className="w-5 h-5 sm:w-6 sm:h-6" />}
         </button>
@@ -142,7 +149,7 @@ export default function Navbar() {
 
       {/* Mobile Drawer */}
       {mobileOpen && (
-        <div className="lg:hidden absolute top-full left-0 right-0 glass border-t border-border animate-slide-down">
+        <div id="mobile-navigation" className="lg:hidden absolute top-full left-0 right-0 glass border-t border-border animate-slide-down">
           <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-col gap-1">
             {navLinks.map((link) => (
               <Link
@@ -194,6 +201,7 @@ export default function Navbar() {
 
       {/* Login Modal */}
       <GoogleLoginModal isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} />
-    </header>
+      </header>
+    </>
   );
 }

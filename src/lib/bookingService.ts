@@ -28,16 +28,39 @@ export async function submitBookingRequest(
   const user = auth.currentUser;
   if (!user) throw new Error("Must be logged in to book");
 
+  const duration = Number(data.duration);
+  if (!Number.isFinite(duration) || duration < 15 || duration > 24 * 60) {
+    throw new Error("Choose a charging duration between 15 minutes and 24 hours.");
+  }
+
+  const spotSnapshot = await get(ref(database, `chargingSpots/${data.spotId}`));
+  if (!spotSnapshot.exists()) throw new Error("This charging spot is no longer available.");
+  const spot = spotSnapshot.val();
+  if (spot.status && spot.status !== "active") throw new Error("This charging spot is not currently available.");
+
+  const pricePerHour = Math.max(0, Number(spot.pricePerHour) || 0);
   const requestsRef = ref(database, `chargingRequests/${user.uid}`);
   const newRef = push(requestsRef);
-  await set(newRef, {
-    ...data,
+  const bookingPayload = {
+    spotId: data.spotId,
+    spotName: spot.name || data.spotName,
+    hostName: spot.hostName || data.hostName,
+    hostPhone: spot.hostPhone || data.hostPhone,
     userId: user.uid,
     userName: user.displayName || "",
+    userPhone: data.userPhone,
     userEmail: user.email || "",
     requestedAt: serverTimestamp(),
+    duration,
     status: "pending",
-  });
+    message: typeof data.message === "string" ? data.message.trim().slice(0, 500) : "",
+    pricePerHour,
+    estimatedCost: Math.round((pricePerHour * duration / 60) * 100) / 100,
+    city: spot.city || data.city,
+    outletType: spot.outletType || data.outletType,
+  };
+  await set(newRef, bookingPayload);
+  await set(ref(database, `spotRequests/${data.spotId}/${newRef.key}`), bookingPayload);
   return newRef.key!;
 }
 
@@ -63,27 +86,22 @@ export async function getUserBookings(uid: string): Promise<BookingRequest[]> {
 
 /** Cancel a pending booking */
 export async function cancelBooking(uid: string, bookingId: string): Promise<void> {
+  if (!auth.currentUser || auth.currentUser.uid !== uid) {
+    throw new Error("You can only cancel your own bookings.");
+  }
   const bookRef = ref(database, `chargingRequests/${uid}/${bookingId}`);
-  await update(bookRef, { status: "cancelled", updatedAt: serverTimestamp() });
+  const snapshot = await get(bookRef);
+  if (!snapshot.exists()) throw new Error("Booking not found.");
+  if (snapshot.val().status !== "pending") throw new Error("Only pending bookings can be cancelled.");
+  const updates = { status: "cancelled", updatedAt: serverTimestamp() };
+  await update(bookRef, updates);
+  await update(ref(database, `spotRequests/${snapshot.val().spotId}/${bookingId}`), updates);
 }
 
 /** Get all requests for a given spot (host view) */
 export async function getSpotRequests(spotId: string): Promise<BookingRequest[]> {
-  // KNOWN LIMITATION (pre-production): full-table scan of chargingRequests across all
-  // users. Does not scale and exposes cross-user data to any client that can call this.
-  // Proper fix requires Firebase security rules plus a denormalized index (e.g.
-  // spotRequests/{spotId}/{requestId}) — track as a separate task before launch.
-  const allRef = ref(database, "chargingRequests");
-  const snap = await get(allRef);
-  if (!snap.exists()) return [];
-
-  const all = snap.val();
-  const result: BookingRequest[] = [];
-  for (const uid of Object.keys(all)) {
-    for (const reqId of Object.keys(all[uid])) {
-      const req = all[uid][reqId];
-      if (req.spotId === spotId) result.push({ id: reqId, ...req });
-    }
-  }
-  return result;
+  const spotSnapshot = await get(ref(database, `spotRequests/${spotId}`));
+  if (!spotSnapshot.exists()) return [];
+  const requests = spotSnapshot.val();
+  return Object.keys(requests).map((id) => ({ id, ...requests[id] }));
 }

@@ -2,14 +2,26 @@
   "rules": {
     ".read": false,
     ".write": false,
+    "admins": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).exists())",
+        ".write": false
+      }
+    },
+    "users": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).exists())",
+        ".write": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).exists())",
+        ".validate": "newData.hasChildren(['displayName', 'email', 'createdAt']) && (root.child('admins').child(auth.uid).exists() || newData.child('role').val() === data.child('role').val() || (!data.exists() && newData.child('role').val() === 'user'))"
+      }
+    },
     "hostRegistrations": {
       "$uid": {
-        ".read": "$uid === auth.uid",
-        ".write": "$uid === auth.uid",
+        ".read": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).exists())",
         "$registrationId": {
-          ".read": "$uid === auth.uid",
-          ".write": "$uid === auth.uid && newData.child('userId').val() === auth.uid",
-          ".validate": "newData.hasChildren(['userId', 'fullName', 'email', 'phone', 'address', 'city', 'state', 'pincode', 'outletType', 'chargingSpeed', 'availableHours', 'pricePerHour', 'agreeToTerms']) && newData.child('agreeToTerms').val() === true && newData.child('userId').val() === auth.uid"
+          ".read": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).exists())",
+          ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || (auth.uid === $uid && newData.child('userId').val() === auth.uid && newData.child('status').val() === 'pending'))",
+          ".validate": "newData.hasChildren(['userId', 'fullName', 'email', 'phone', 'address', 'city', 'state', 'pincode', 'outletType', 'chargingSpeed', 'availableHours', 'pricePerHour', 'agreeToTerms', 'status']) && newData.child('userId').val() === $uid && newData.child('agreeToTerms').val() === true && (newData.child('status').val() === 'pending' || root.child('admins').child(auth.uid).exists())"
         }
       }
     },
@@ -17,23 +29,28 @@
       ".read": true,
       "$spotId": {
         ".read": true,
-        ".write": "auth != null && (auth.uid === data.child('hostId').val() || auth.uid === newData.child('hostId').val())",
+        ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || (data.exists() && data.child('hostId').val() === auth.uid && newData.child('hostId').val() === data.child('hostId').val()) || (!data.exists() && newData.child('hostId').val() === auth.uid))",
         ".validate": "newData.hasChildren(['hostId', 'hostName', 'address', 'city', 'state', 'pincode', 'outletType', 'pricePerHour'])"
       }
     },
-    "admins": {
-      ".read": "root.child('admins').child(auth.uid).exists()",
-      ".write": false,
-      "$uid": {
-        ".read": "$uid === auth.uid || root.child('admins').child(auth.uid).exists()",
-        ".write": false
+    "spotRequests": {
+      "$spotId": {
+        ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || root.child('chargingSpots').child($spotId).child('hostId').val() === auth.uid)",
+        "$requestId": {
+          ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || root.child('chargingSpots').child($spotId).child('hostId').val() === auth.uid || data.child('userId').val() === auth.uid)",
+          ".write": "auth != null && auth.uid === newData.child('userId').val() && newData.child('spotId').val() === $spotId",
+          ".validate": "newData.child('userId').val() === auth.uid && newData.child('spotId').val() === $spotId"
+        }
       }
     },
-    "users": {
+    "chargingRequests": {
       "$uid": {
-        ".read": "$uid === auth.uid",
-        ".write": "$uid === auth.uid",
-        ".validate": "newData.hasChildren(['displayName', 'email', 'createdAt'])"
+        ".read": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).exists())",
+        "$requestId": {
+          ".read": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).exists())",
+          ".write": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).exists())",
+          ".validate": "newData.child('userId').val() === $uid"
+        }
       }
     }
   }
