@@ -124,17 +124,20 @@ export default function BecomeHost() {
             {steps.map((step, i) => {
               const Icon = step.icon;
               return (
-                <div key={i} className="reveal flex gap-6 relative" style={{ transitionDelay: `${i * 0.15}s` }}>
+                <div key={i} className="reveal flex gap-6 relative group" style={{ transitionDelay: `${i * 0.15}s` }}>
                   {i < steps.length - 1 && (
                     <div className="absolute left-6 top-16 w-0.5 h-full bg-border" />
                   )}
-                  <div className="w-12 h-12 rounded-xl gradient-green flex items-center justify-center flex-shrink-0 relative z-10 shadow-md">
+                  <div className="w-12 h-12 rounded-xl gradient-green flex items-center justify-center flex-shrink-0 relative z-10 shadow-md group-hover:scale-110 transition-transform duration-300">
                     <Icon className="w-6 h-6 text-white" />
                   </div>
-                  <div className="pb-12">
-                    <div className="text-xs font-semibold text-ev-green uppercase tracking-wider mb-1">Step {i + 1}</div>
-                    <h3 className="font-display font-semibold text-lg text-foreground mb-1">{step.title}</h3>
-                    <p className="text-sm text-muted-foreground">{step.desc}</p>
+                  <div className="pb-12 flex-1 p-4 -ml-4 rounded-2xl group-hover:bg-card/60 transition-colors duration-300">
+                    <div className="flex items-center gap-3 mb-1">
+                      <span className="text-xs font-bold uppercase tracking-[0.16em] text-ev-green">Step {i + 1}</span>
+                      <span className="h-px flex-1 bg-border/60" />
+                    </div>
+                    <h3 className="font-display font-semibold text-lg text-foreground mb-1 group-hover:text-ev-green transition-colors duration-300">{step.title}</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
                   </div>
                 </div>
               );
@@ -154,16 +157,22 @@ export default function BecomeHost() {
           </div>
           <div className="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto reveal">
             {[
-              { period: "Daily", amount: "Rs 100 - Rs 200", sessions: "2-4 sessions" },
-              { period: "Weekly", amount: "Rs 700 - Rs 1,400", sessions: "14-28 sessions" },
-              { period: "Monthly", amount: "Rs 3,000 - Rs 5,000+", sessions: "60-120 sessions" },
-            ].map((e, i) => (
-              <div key={i} className="text-center p-8 rounded-2xl bg-card border border-border shadow-sm hover:shadow-lg transition-all hover:-translate-y-1">
-                <div className="text-sm font-medium text-muted-foreground mb-2">{e.period}</div>
-                <div className="font-display font-bold text-2xl text-ev-green mb-1">{e.amount}</div>
-                <div className="text-xs text-muted-foreground">{e.sessions}</div>
-              </div>
-            ))}
+              { period: "Daily", amount: "Rs 100 – Rs 200", sessions: "2–4 sessions", icon: Zap },
+              { period: "Weekly", amount: "Rs 700 – Rs 1,400", sessions: "14–28 sessions", icon: TrendingUp },
+              { period: "Monthly", amount: "Rs 3,000 – Rs 5,000+", sessions: "60–120 sessions", icon: DollarSign },
+            ].map((e, i) => {
+              const Icon = e.icon;
+              return (
+                <div key={i} className="text-center p-8 rounded-2xl bg-card border border-border shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+                  <div className="w-12 h-12 mx-auto rounded-xl bg-ev-green/10 group-hover:bg-ev-green/20 transition-colors duration-300 flex items-center justify-center mb-4">
+                    <Icon className="w-6 h-6 text-ev-green" />
+                  </div>
+                  <div className="text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-2">{e.period}</div>
+                  <div className="font-display font-bold text-2xl text-ev-green mb-1">{e.amount}</div>
+                  <div className="text-xs text-muted-foreground">{e.sessions}</div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>

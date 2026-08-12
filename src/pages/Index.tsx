@@ -167,6 +167,37 @@ const Index = () => {
 
   const statsSection = <StatsCounter />;
 
+  const trustStrip = (
+    <section aria-label="Network trust highlights" className="relative z-10 -mt-8 lg:-mt-12">
+      <div className="page-shell">
+        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-border shadow-xl sm:grid-cols-4">
+          <div className="flex flex-col items-start gap-1 bg-card p-5 sm:p-6">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground"><MapPin className="h-3.5 w-3.5 text-primary" /> Live spots</div>
+            <div className="text-2xl font-bold text-foreground">
+              {loadingSpots ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : (featuredSpots.length || '—')}
+            </div>
+            <div className="text-xs text-muted-foreground">Featured near you</div>
+          </div>
+          <div className="flex flex-col items-start gap-1 bg-card p-5 sm:p-6">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground"><Shield className="h-3.5 w-3.5 text-ev-green" /> Verified</div>
+            <div className="text-2xl font-bold text-foreground">100%</div>
+            <div className="text-xs text-muted-foreground">Hosts are identity-checked</div>
+          </div>
+          <div className="flex flex-col items-start gap-1 bg-card p-5 sm:p-6">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground"><Zap className="h-3.5 w-3.5 text-primary" /> Pay per use</div>
+            <div className="text-2xl font-bold text-foreground">Rs 5–15</div>
+            <div className="text-xs text-muted-foreground">Per 10-minute session</div>
+          </div>
+          <div className="flex flex-col items-start gap-1 bg-card p-5 sm:p-6">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground"><Users className="h-3.5 w-3.5 text-ev-green" /> Community</div>
+            <div className="text-2xl font-bold text-foreground">Neighbors</div>
+            <div className="text-xs text-muted-foreground">Riders helping riders</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+
   const howItWorksSection = (
     <section className="py-20 lg:py-24">
       <div className="container mx-auto px-4">

@@ -527,14 +527,19 @@ export default function FindSpots() {
           )}
 
           {!loading && (
-            <div className="flex items-center gap-6 mb-8 text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mb-8 text-sm text-muted-foreground">
               <span className="flex items-center gap-1.5">
                 <MapPin className="w-4 h-4 text-primary" />
-                {filteredSpots.length} spots found
+                <span className="font-semibold text-foreground">{filteredSpots.length}</span> spots
+                found
               </span>
               <span className="flex items-center gap-1.5">
                 <BadgeCheck className="w-4 h-4 text-ev-green" />
                 {filteredSpots.filter((s) => s.isVerified).length} verified
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Battery className="w-4 h-4 text-ev-green" />
+                {filteredSpots.filter((s) => isSpotOpen(s.availableHours)).length} open now
               </span>
               {viewMode === "route" && routeDistanceKm !== null && !routeFallback && (
                 <span className="flex items-center gap-1.5">

@@ -228,6 +228,39 @@ const AdminRequestsPage: React.FC = () => {
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Charging Requests</h1>
           <p className="text-muted-foreground">Manage and respond to charging requests</p>
         </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={fetchRequests} disabled={loading} aria-label="Refresh requests">
+            <svg className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M21 12a9 9 0 1 1-3-6.7L21 8" />
+              <path d="M21 3v5h-5" />
+            </svg>
+            Refresh
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setStatusFilter('pending')}
+            aria-label="Jump to pending queue"
+          >
+            <Zap className="w-4 h-4 mr-2 text-primary" />
+            Review Pending ({requests.filter(r => r.status === 'pending').length})
+          </Button>
+        </div>
+      </div>
+
+      {/* Queue summary */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { label: 'Pending', count: requests.filter(r => r.status === 'pending').length, accent: 'bg-yellow-50 text-yellow-700' },
+          { label: 'Approved', count: requests.filter(r => r.status === 'approved').length, accent: 'bg-green-50 text-green-700' },
+          { label: 'Rejected', count: requests.filter(r => r.status === 'rejected').length, accent: 'bg-red-50 text-red-700' },
+          { label: 'Total', count: requests.length, accent: 'bg-primary/10 text-primary' },
+        ].map(({ label, count, accent }) => (
+          <div key={label} className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3">
+            <span className="text-sm font-medium text-muted-foreground">{label}</span>
+            <span className={`text-lg font-bold rounded-lg px-2 py-0.5 ${accent}`}>{count}</span>
+          </div>
+        ))}
       </div>
 
       {/* Error Display */}

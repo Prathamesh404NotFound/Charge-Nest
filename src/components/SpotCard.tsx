@@ -306,16 +306,34 @@ export default function SpotCard({
           )}
           <span className="flex items-center gap-1.5 col-span-2 sm:col-span-1" title="Availability">
             <Clock className="w-4 h-4 text-primary/70 shrink-0" />
-            <span className="truncate">{availableHours || "24/7"}</span>
+            <span className="truncate">
+              {availableHours || "24/7"}
+              {isOpen !== undefined && (
+                <span
+                  className={cn(
+                    "ml-1.5 inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-semibold",
+                    isOpen ? "bg-ev-green/10 text-ev-green" : "bg-destructive/10 text-destructive"
+                  )}
+                >
+                  <span className={cn("w-1.5 h-1.5 rounded-full", isOpen ? "bg-ev-green" : "bg-destructive")} />
+                  {isOpen ? "Open" : "Closed"}
+                </span>
+              )}
+            </span>
           </span>
         </div>
 
         <div className="flex gap-2 mt-auto">
           <Button
             onClick={handleBookNow}
-            className="flex-1 rounded-xl font-semibold shadow-md gradient-primary text-white border-0 hover:opacity-90 hover:-translate-y-0.5 transition-all"
+            disabled={isOpen === false}
+            aria-disabled={isOpen === false}
+            className={cn(
+              "flex-1 rounded-xl font-semibold shadow-md gradient-primary text-white border-0 hover:opacity-90 hover:-translate-y-0.5 transition-all",
+              isOpen === false && "opacity-60 cursor-not-allowed hover:translate-y-0"
+            )}
           >
-            Book Now
+            {isOpen === false ? "Currently Closed" : "Book Now"}
           </Button>
           {hostPhone && (
             <>
