@@ -25,6 +25,7 @@ import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useIsMobile, useIsDesktop } from "@/hooks/use-mobile";
 import StepIndicator from "@/components/StepIndicator";
+import { ReviewsSection } from "@/components/ReviewsSection";
 import type { Amenity } from "@/types";
 
 /** Mobile bottom-sheet (< md / 768px). Tablet+ uses centered Dialog. */
@@ -688,6 +689,12 @@ export default function BookingModal({ isOpen, onClose, spot }: BookingModalProp
                   </div>
                 </div>
               )}
+
+              <ReviewsSection
+                spotId={spot.id ?? ""}
+                spotRating={0}
+                hostId={spot.hostId}
+              />
 
               <p className="text-sm text-muted-foreground text-center pt-4 border-t border-border">
                 Is this the right spot?

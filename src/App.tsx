@@ -19,6 +19,7 @@ import BecomeHost from "./pages/BecomeHost";
 import HowItWorks from "./pages/HowItWorks";
 import Pricing from "./pages/Pricing";
 import CityKolhapur from "./pages/CityKolhapur";
+import CityPage from "./pages/CityPage";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Dashboard from "./pages/Dashboard";
@@ -32,6 +33,7 @@ import AdminUsersPage from "./pages/Admin/AdminUsersPage";
 import AdminSpotsPage from "./pages/Admin/AdminSpotsPage";
 import AdminRequestsPage from "./pages/Admin/AdminRequestsPage";
 import AdminAnalyticsPage from "./pages/Admin/AdminAnalyticsPage";
+import AdminPayoutsPage from "./pages/Admin/AdminPayoutsPage";
 import AdminGovernmentStationsPage from "./pages/Admin/AdminGovernmentStationsPage";
 import '@/styles/responsive.css';
 
@@ -83,7 +85,8 @@ function AppContent() {
         <Route path="/host" element={<BecomeHost />} />
         <Route path="/how-it-works" element={<HowItWorks />} />
         <Route path="/pricing" element={<Pricing />} />
-        <Route path="/kolhapur" element={<CityKolhapur />} />
+        <Route path="/kolhapur" element={<Navigate to="/city/kolhapur" replace />} />
+        <Route path="/city/:slug" element={<CityPage />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/dashboard" element={
@@ -134,6 +137,7 @@ function AppContent() {
           <Route path="government-stations" element={<AdminGovernmentStationsPage />} />
           <Route path="requests" element={<AdminRequestsPage />} />
           <Route path="analytics" element={<AdminAnalyticsPage />} />
+          <Route path="payouts" element={<AdminPayoutsPage />} />
           <Route path="settings" element={<AdminDashboardPage />} />
         </Route>
 

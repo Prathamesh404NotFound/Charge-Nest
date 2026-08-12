@@ -1,20 +1,31 @@
 {
-  "name": "VoltSetu - EV Charging Spot Marketplace",
   "short_name": "VoltSetu",
+  "name": "VoltSetu — Find EV Two-Wheeler Charging Spots Near You",
+  "description": "VoltSetu is India's peer-to-peer EV two-wheeler charging marketplace. Discover verified home and shop charging spots in Kolhapur, Pune, Mumbai and beyond, book a slot in seconds, and get back on the road. Become a host and earn from your spare outlet.",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#3b82f6",
+  "orientation": "portrait",
+  "background_color": "#0a0f1c",
+  "theme_color": "#4f46e5",
+  "categories": ["travel", "navigation", "lifestyle", "utilities"],
+  "lang": "en-IN",
   "icons": [
     {
       "src": "/logo192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/logo512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     }
-  ]
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
 }

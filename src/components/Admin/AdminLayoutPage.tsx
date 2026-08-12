@@ -18,7 +18,8 @@ import {
   HelpCircle,
   ChevronDown,
   Building,
-  Search
+  Search,
+  Wallet
 } from 'lucide-react';
 import { useAuth } from '@/components/Auth/AuthProvider';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -67,6 +68,12 @@ const adminNavigation = [
     href: '/admin/analytics',
     icon: BarChart3,
     description: 'View system analytics'
+  },
+  {
+    title: 'Payouts',
+    href: '/admin/payouts',
+    icon: Wallet,
+    description: 'Track host earnings and payouts'
   },
   {
     title: 'System Settings',

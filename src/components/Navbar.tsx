@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Zap } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Menu, X, Zap, MapPin, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "./Auth/AuthProvider";
 import GoogleLoginModal from "./Auth/GoogleLoginModal";
@@ -9,6 +9,14 @@ import NotificationBell from "./NotificationBell";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { requestNotificationPermission } from "@/lib/browserNotifications";
+import { CITIES, getCityBySlug } from "@/lib/cities";
+import { InstallPwaButton } from "@/components/InstallPwaButton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const navLinks = [
   { to: "/", label: "Home" },
@@ -25,6 +33,7 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
 
   useEffect(() => {
@@ -105,6 +114,8 @@ export default function Navbar() {
         </nav>
 
         <div className="hidden lg:flex items-center gap-1.5 xl:gap-3">
+          <CitySelector onNavigate={navigate} />
+          <InstallPwaButton />
           {user ? (
             <>
               <NotificationBell />
@@ -165,6 +176,12 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
+            <div className="px-4 py-2">
+              <CitySelector onNavigate={navigate} compact />
+            </div>
+            <div className="px-4 py-2">
+              <InstallPwaButton />
+            </div>
             {user ? (
               <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row items-center gap-3 px-4">
                 <div className="flex items-center gap-2">
@@ -203,5 +220,62 @@ export default function Navbar() {
       <GoogleLoginModal isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} />
       </header>
     </>
+  );
+}
+
+/**
+ * City selector dropdown: switches between active VoltSetu cities.
+ * Highlighting inactive "coming soon" cities keeps the expansion roadmap
+ * visible without routing to unavailable pages.
+ */
+export function CitySelector({
+  onNavigate,
+  compact = false,
+}: {
+  onNavigate: (path: string) => void;
+  compact?: boolean;
+}) {
+  const currentSlug = CITIES.find((c) => c.active && window.location.pathname === `/city/${c.slug}`)?.slug ?? "kolhapur";
+  const current = getCityBySlug(currentSlug) ?? CITIES[0];
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-2.5 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+            compact && "w-full justify-start rounded-lg"
+          )}
+          aria-label="Choose a city"
+        >
+          <MapPin className="w-3.5 h-3.5 text-primary" />
+          <span>{current.name}</span>
+          <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-52 max-h-80 overflow-y-auto">
+        {CITIES.map((city) =>
+          city.active ? (
+            <DropdownMenuItem
+              key={city.slug}
+              onClick={() => onNavigate(`/city/${city.slug}`)}
+              className="cursor-pointer"
+            >
+              <MapPin className="w-4 h-4 mr-1 text-primary" />
+              {city.name}
+              {city.launch && (
+                <span className="ml-auto text-[10px] font-semibold text-ev-green bg-ev-green/15 px-1.5 py-0.5 rounded-full">Launch</span>
+              )}
+            </DropdownMenuItem>
+          ) : (
+            <div key={city.slug} className="px-2 py-1.5 text-xs text-muted-foreground/70 flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5 opacity-60" />
+              {city.name}
+              <span className="ml-auto text-[10px] bg-muted px-1.5 py-0.5 rounded-full">Coming soon</span>
+            </div>
+          )
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

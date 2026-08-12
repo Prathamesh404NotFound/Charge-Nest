@@ -43,6 +43,26 @@
         }
       }
     },
+    "spotReviews": {
+      "$spotId": {
+        ".read": "auth != null",
+        "$reviewId": {
+          ".read": "auth != null",
+          ".write": "auth != null && auth.uid === newData.child('userId').val()",
+          ".validate": "auth.uid === newData.child('userId').val() && newData.child('rating').val() >= 1 && newData.child('rating').val() <= 5"
+        }
+      }
+    },
+    "payouts": {
+      "$hostId": {
+        ".read": "auth != null && (auth.uid === $hostId || root.child('admins').child(auth.uid).exists())",
+        "$payoutId": {
+          ".read": "auth != null && (auth.uid === $hostId || root.child('admins').child(auth.uid).exists())",
+          ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+          ".validate": "newData.hasChildren(['hostId', 'amount', 'status'])"
+        }
+      }
+    },
     "chargingRequests": {
       "$uid": {
         ".read": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).exists())",

@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo, type ReactNode } from "react";
 import { Star, MapPin, Clock, BadgeCheck, Phone, Zap, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isFavorite, toggleFavorite } from "@/lib/favoritesService";
+import { aggregateRating, getSpotReviews } from "@/lib/reviewsService";
+import type { Review } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "./Auth/AuthProvider";
 import { Button } from "@/components/ui/button";
@@ -77,6 +79,21 @@ export default function SpotCard({
     user ? isFavorite(user.uid, id ?? "") : false
   );
   const [imgError, setImgError] = useState(false);
+  const [spotReviews, setSpotReviews] = useState<Review[]>([]);
+
+  useEffect(() => {
+    if (!id) return;
+    let mounted = true;
+    getSpotReviews(id).then((list) => mounted && setSpotReviews(list)).catch(() => mounted && setSpotReviews([]));
+    return () => {
+      mounted = false;
+    };
+  }, [id]);
+
+  const displayRating = useMemo(() => {
+    const { rating: avg, count } = aggregateRating(spotReviews, rating ?? 0);
+    return { avg, count };
+  }, [spotReviews, rating]);
   // null = no record yet (omit badge), non-null = live data
   const [availability, setAvailability] = useState<SpotAvailability | null | undefined>(undefined);
 
@@ -308,11 +325,18 @@ export default function SpotCard({
               <span className="truncate">{distance}</span>
             </span>
           )}
-          {rating && reviews > 0 ? (
+          {displayRating.count > 0 ? (
             <span className="flex items-center gap-1.5" title="Rating">
               <Star className="w-4 h-4 text-yellow-500 fill-yellow-500 shrink-0" />
               <span>
-                {rating} <span className="text-xs">({reviews})</span>
+                {displayRating.avg.toFixed(1)} <span className="text-xs">({displayRating.count})</span>
+              </span>
+            </span>
+          ) : rating && rating > 0 ? (
+            <span className="flex items-center gap-1.5" title="Rating">
+              <Star className="w-4 h-4 text-yellow-500 fill-yellow-500 shrink-0" />
+              <span>
+                {rating.toFixed(1)} <span className="text-xs">({reviews}+)</span>
               </span>
             </span>
           ) : (

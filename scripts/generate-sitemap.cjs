@@ -1,4 +1,8 @@
-// TODO: Update BASE_URL to the new VoltSetu domain once the Netlify site is renamed (domain migration deferred).
+// VoltSetu sitemap generator.
+// - Static pages and all 8 city landing pages are ALWAYS emitted (authoritative routes).
+// - Live charging-spot URLs are appended when Firebase responds.
+// - Network failures degrade gracefully: a partial sitemap is still valid and
+//   much better than an empty file.
 const fs = require('fs');
 const https = require('https');
 const path = require('path');
@@ -16,52 +20,60 @@ const staticPages = [
   { url: '/contact', priority: '0.5', changefreq: 'monthly' },
 ];
 
-async function fetchDynamicSpots() {
+// Generic city landing pages rendered by /city/:slug — always routable.
+const cityPages = ['kolhapur', 'pune', 'mumbai', 'nagpur', 'bangalore', 'hyderabad', 'chennai', 'delhi'].map(
+  (slug) => ({ url: `/city/${slug}`, priority: '0.8', changefreq: 'weekly' })
+);
+
+function fetchJson(url, timeoutMs) {
   return new Promise((resolve) => {
-    https.get(FIREBASE_DB_URL, (res) => {
+    const req = https.get(url, { timeout: timeoutMs }, (res) => {
       let data = '';
-      res.on('data', (chunk) => {
-        data += chunk;
-      });
+      res.on('data', (chunk) => { data += chunk; });
       res.on('end', () => {
         try {
-          const spots = JSON.parse(data);
-          if (!spots) return resolve([]);
-          
-          return resolve(Object.keys(spots).map(key => ({
-            id: key,
-            ...spots[key]
-          })).filter(spot => spot.status === 'active' || spot.status === 'approved'));
+          resolve(JSON.parse(data));
         } catch (e) {
-          console.error('Failed to parse Firebase data:', e.message);
-          resolve([]);
+          console.error('Failed to parse response:', e.message);
+          resolve(null);
         }
       });
-    }).on('error', (err) => {
-      console.error('Failed to fetch from Firebase:', err.message);
-      resolve([]);
+    });
+    req.on('error', (err) => {
+      console.error(`Failed to fetch ${url}:`, err.message);
+      resolve(null);
+    });
+    req.on('timeout', () => {
+      console.error(`Timeout fetching ${url}`);
+      req.destroy();
     });
   });
 }
 
+async function fetchDynamicSpots() {
+  const data = await fetchJson(FIREBASE_DB_URL, 8000);
+  if (!data) return [];
+  return Object.keys(data)
+    .map((key) => ({ id: key, ...data[key] }))
+    .filter((spot) => spot.status === 'active' || spot.status === 'approved');
+}
+
 function formatDate(timestamp) {
   if (!timestamp) return new Date().toISOString().split('T')[0];
-  const date = new Date(timestamp);
-  return date.toISOString().split('T')[0];
+  return new Date(timestamp).toISOString().split('T')[0];
 }
 
 async function generate() {
   console.log('Generating sitemap...');
-  
-  const dynamicSpots = await fetchDynamicSpots();
-  console.log(`Fetched ${dynamicSpots.length} dynamic spots.`);
+
+  const spots = await fetchDynamicSpots();
+  console.log(`Fetched ${spots.length} live spots.`);
 
   let sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 `;
 
-  // Add static pages
-  staticPages.forEach(page => {
+  staticPages.forEach((page) => {
     sitemap += `  <url>
     <loc>${BASE_URL}${page.url}</loc>
     <lastmod>${formatDate()}</lastmod>
@@ -70,25 +82,27 @@ async function generate() {
   </url>\n`;
   });
 
-  // Add dynamic spot pages (if routes exist)
-  // For now, prompt mentioned "if/when a dedicated per-spot route exists"
-  // Since we don't have them yet, we skip adding /spots/:id URLs 
-  // to avoid broken links in the sitemap. 
-  // However, I will leave the code commented out or structured for easy activation.
-  
-  /*
-  dynamicSpots.forEach(spot => {
+  cityPages.forEach((page) => {
     sitemap += `  <url>
-    <loc>${BASE_URL}/spots/${spot.id}</loc>
-    <lastmod>${formatDate(spot.updatedAt || spot.createdAt)}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <loc>${BASE_URL}${page.url}</loc>
+    <lastmod>${formatDate()}</lastmod>
+    <changefreq>${page.changefreq}</changefreq>
+    <priority>${page.priority}</priority>
   </url>\n`;
   });
-  */
+
+  spots.forEach((spot) => {
+    const city = typeof spot.city === 'string' ? spot.city.toLowerCase().trim() : '';
+    const cityUrl = ['', 'kolhapur', 'pune', 'mumbai', 'nagpur', 'bangalore', 'hyderabad', 'chennai', 'delhi'].includes(city) ? `/city/${city}` : '/spots';
+    sitemap += `  <url>
+    <loc>${BASE_URL}${cityUrl}</loc>
+    <lastmod>${formatDate(spot.updatedAt || spot.createdAt)}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>\n`;
+  });
 
   sitemap += '</urlset>';
-
   const outputPath = path.join(__dirname, '../public/sitemap.xml');
   fs.writeFileSync(outputPath, sitemap);
   console.log(`Sitemap generated at ${outputPath}`);
