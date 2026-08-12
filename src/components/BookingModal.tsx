@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import { useIsMobile, useIsDesktop } from "@/hooks/use-mobile";
 import StepIndicator from "@/components/StepIndicator";
 import { ReviewsSection } from "@/components/ReviewsSection";
+import FacilitiesChips from "@/components/FacilitiesChips";
 import type { Amenity } from "@/types";
 
 /** Mobile bottom-sheet (< md / 768px). Tablet+ uses centered Dialog. */
@@ -739,16 +740,7 @@ export default function BookingModal({ isOpen, onClose, spot }: BookingModalProp
               {availableAmenities.length > 0 && (
                 <div>
                   <label className="block text-sm font-medium mb-2">Amenities</label>
-                  <div className="flex flex-wrap gap-2">
-                    {availableAmenities.map((amenity) => (
-                      <span
-                        key={amenity.id}
-                        className="px-3 py-1 rounded-full bg-muted border border-border text-xs font-medium text-foreground"
-                      >
-                        {amenity.name}
-                      </span>
-                    ))}
-                  </div>
+                  <FacilitiesChips amenities={availableAmenities} />
                 </div>
               )}
 

@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/components/Auth/AuthProvider";
+import FacilitiesChips from "@/components/FacilitiesChips";
 import AdminLayoutPage from "@/components/Admin/AdminLayoutPage";
 import {
   getAllListingReviews,
@@ -238,6 +239,9 @@ export default function AdminListingReviewsPage() {
                   <div><dt className="text-slate-400">Host</dt><dd className="font-medium text-slate-700">{r.hostName || "—"}</dd></div>
                   <div><dt className="text-slate-400">Phone</dt><dd className="font-medium text-slate-700">{r.hostPhone || "—"}</dd></div>
                   <div><dt className="text-slate-400">Outlet</dt><dd className="font-medium text-slate-700">{r.outletType || "—"}</dd></div>
+                  {Array.isArray(r.facilities) && r.facilities.length > 0 && (
+                    <div className="col-span-2"><dt className="text-slate-400">Facilities</dt><dd><FacilitiesChips amenities={(r.facilities as string[]).map((id) => ({ id, name: id.replace(/_/g, " ") }))} /></dd></div>
+                  )}
                   <div><dt className="text-slate-400">Price</dt><dd className="font-medium text-slate-700">₹{r.pricePerHour}/hr</dd></div>
                   <div className="col-span-2"><dt className="text-slate-400">Verified host</dt><dd className="font-medium text-slate-700">{r.isVerifiedHost ? "Yes" : "No — identity check first"}</dd></div>
                 </dl>

@@ -8,6 +8,9 @@ import {
 import { useAuth } from "../Auth/AuthProvider";
 import { Button } from "@/components/ui/button";
 import StepIndicator from "@/components/StepIndicator";
+import FacilityPicker from "@/components/FacilityPicker";
+import FacilitiesChips from "@/components/FacilitiesChips";
+import { sanitizeFacilityIds, FACILITIES as FACILITY_LIST, type Facility } from "@/lib/facilities";
 import { submitHostRegistration } from "@/lib/hostRegistration";
 import {
   submitHostVerification,
@@ -56,6 +59,7 @@ interface FormData {
   chargingSpeed: string;
   availableHours: string;
   pricePerHour: string;
+  facilities: string[];
   // Step 4 – Identity documents
   documents: WizardDoc[];
   // Step 5 – Confirm
@@ -111,6 +115,7 @@ const defaultFormData = (user: any): FormData => ({
   chargingSpeed: "",
   availableHours: "",
   pricePerHour: "",
+  facilities: [],
   documents: [],
   agreeToTerms: false,
 });
@@ -123,6 +128,8 @@ const STEPS = [
   { label: "Confirm & Submit", icon: CheckCircle2    },
 ];
 const TOTAL_STEPS = 5;
+
+const FACILITY_MAP = new Map<string, Facility>(FACILITY_LIST.map((f) => [f.id, f]));
 
 const DOC_TYPE_META: { type: string; label: string; hint: string }[] = [
   { type: "aadhaar", label: "Aadhaar Card", hint: "First 4 + last 4 digits only — never full number" },
@@ -521,6 +528,7 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
         coordinates:    form.coordinates,
         agreeToTerms:   form.agreeToTerms,
         googleMapsLink: form.googleMapsLink || "",
+        facilities:     sanitizeFacilityIds(form.facilities),
       });
       registrationId = regResult.registrationId;
 
@@ -971,6 +979,10 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
                     placeholder="50" min="0" />
                 </div>
               </div>
+              <FacilityPicker
+                selected={form.facilities}
+                onChange={(ids) => update("facilities", ids)}
+              />
             </div>
           </div>
         );
@@ -1327,6 +1339,17 @@ const HostRegistrationModal = ({ isOpen, onClose }: HostRegistrationModalProps) 
                         <span className="text-muted-foreground">Docs</span>
                         <span className="font-medium">{form.documents.length} attached</span>
                       </div>
+                      {form.facilities.length > 0 && (
+                        <div>
+                          <span className="text-muted-foreground">Facilities</span>
+                          <div className="mt-1">
+                            <FacilitiesChips amenities={form.facilities.map((id) => {
+                              const f = FACILITY_MAP.get(id);
+                              return f ? { id: f.id, icon: f.icon, name: f.name } : null;
+                            }).filter(Boolean)} />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

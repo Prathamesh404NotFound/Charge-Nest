@@ -303,6 +303,7 @@ export default function FindSpots() {
         isVerified={spot.isVerified}
         outletType={spot.outletType}
         availableHours={spot.availableHours}
+        amenities={spot.amenities}
         image={spot.photos?.[0]}
         suggestedStop={spot.id === suggestedStopId}
         onBook={() => setSelectedSpot(spot)}

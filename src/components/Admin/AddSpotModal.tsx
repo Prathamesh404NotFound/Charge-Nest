@@ -32,6 +32,8 @@ import { adminCreateSpot } from '@/services/adminService';
 import { adminGetAllUsers } from '@/services/adminService';
 import { validateForm, validationRules } from '@/lib/validation';
 import { LoadingSpinner } from '@/components/ui/loading-states';
+import FacilityPicker from '@/components/FacilityPicker';
+import { facilitiesToAmenities } from '@/lib/facilities';
 
 interface AddSpotModalProps {
   isOpen: boolean;
@@ -91,7 +93,7 @@ interface SpotFormData {
   availableHours: string;
   pricePerHour: number;
   pricePerMinute?: number;
-  amenities: string[];
+  facilities: string[];
 }
 
 const defaultFormData: SpotFormData = {
@@ -112,7 +114,7 @@ const defaultFormData: SpotFormData = {
   availableHours: '24/7',
   pricePerHour: 0,
   pricePerMinute: undefined,
-  amenities: []
+  facilities: []
 };
 
 export default function AddSpotModal({ isOpen, onClose, onSuccess }: AddSpotModalProps) {
@@ -208,7 +210,7 @@ export default function AddSpotModal({ isOpen, onClose, onSuccess }: AddSpotModa
         isVerified: false,
         isFeatured: false,
         photos: [],
-        amenities: [], // Empty array since we're not collecting amenities
+        amenities: facilitiesToAmenities(formData.facilities),
       };
 
       const createdSpot = await adminCreateSpot(spotData);
@@ -467,6 +469,13 @@ export default function AddSpotModal({ isOpen, onClose, onSuccess }: AddSpotModa
                   />
                   {errors.pricePerMinute && <p className="text-sm text-destructive">{errors.pricePerMinute}</p>}
                 </div>
+
+                <div>
+                  <FacilityPicker
+                    selected={formData.facilities}
+                    onChange={(ids) => handleInputChange('facilities', ids)}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -487,6 +496,7 @@ export default function AddSpotModal({ isOpen, onClose, onSuccess }: AddSpotModa
                   <p><strong>Category:</strong> {formData.category}</p>
                   <p><strong>Outlet Type:</strong> {formData.outletType}</p>
                   <p><strong>Price:</strong> Rs {formData.pricePerHour}/hour</p>
+                  <p><strong>Facilities:</strong> {formData.facilities.length > 0 ? formData.facilities.join(', ').replace(/_/g, ' ') : 'None selected'}</p>
                 </div>
               </div>
             </div>

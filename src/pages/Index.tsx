@@ -388,6 +388,7 @@ const Index = () => {
                   isFeatured={i === 0}
                   outletType={spot.outletType}
                   availableHours={spot.availableHours}
+                  amenities={spot.amenities}
                   image={spot.photos?.[0]}
                   onBook={() => setSelectedSpot(spot)}
                 />

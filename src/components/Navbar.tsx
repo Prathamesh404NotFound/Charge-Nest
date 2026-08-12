@@ -28,6 +28,12 @@ const navLinks = [
   { to: "/contact", label: "Contact" },
 ];
 
+// At lg widths (1024–1279px) the full 7-link nav crowds the header. The
+// secondary links move under a compact "More" dropdown there; all links
+// stay visible inline at xl+.
+const primaryLinks = navLinks.slice(0, 4);
+const secondaryLinks = navLinks.slice(4);
+
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -108,13 +114,55 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop Nav */}
-        <nav className="hidden lg:flex items-center gap-1">
-          {navLinks.map((link) => (
+        <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1 min-w-0">
+          {primaryLinks.map((link) => (
             <Link
               key={link.to}
               to={link.to}
               className={cn(
-                "px-3 lg:px-2.5 xl:px-4 py-2 rounded-lg text-sm lg:text-[13px] xl:text-sm font-medium transition-all duration-200 hover:bg-primary/10 hover:text-primary",
+                "px-1.5 xl:px-3 py-2 rounded-lg text-xs xl:text-sm font-medium transition-all duration-200 hover:bg-primary/10 hover:text-primary whitespace-nowrap",
+                location.pathname === link.to
+                  ? "text-primary bg-primary/10 shadow-sm"
+                  : "text-muted-foreground"
+              )}
+              aria-current={location.pathname === link.to ? "page" : undefined}
+            >
+              {link.label}
+            </Link>
+          ))}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className={cn(
+                  "xl:hidden inline-flex items-center gap-1 px-1.5 py-2 rounded-lg text-xs font-medium text-muted-foreground transition-all hover:bg-primary/10 hover:text-primary"
+                )}
+                aria-label="More navigation links"
+              >
+                More <ChevronDown className="w-3 h-3" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              {secondaryLinks.map((link) => (
+                <DropdownMenuItem key={link.to} asChild>
+                  <Link
+                    to={link.to}
+                    className={cn(
+                      "w-full font-medium",
+                      location.pathname === link.to ? "text-primary" : "text-foreground"
+                    )}
+                  >
+                    {link.label}
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {secondaryLinks.map((link) => (
+            <Link
+              key={link.to}
+              to={link.to}
+              className={cn(
+                "hidden xl:inline-block px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-primary/10 hover:text-primary whitespace-nowrap",
                 location.pathname === link.to
                   ? "text-primary bg-primary/10 shadow-sm"
                   : "text-muted-foreground"
@@ -126,16 +174,28 @@ export default function Navbar() {
           ))}
         </nav>
 
-        <div className="hidden lg:flex items-center gap-1.5 xl:gap-3">
-          <CitySelector onNavigate={navigate} />
-          <InstallPwaButton />
+        <div className="hidden lg:flex items-center gap-1.5 xl:gap-2.5 min-w-0">
+          <span className="xl:hidden w-px h-4 bg-border/60" />
+          <span className="hidden xl:inline-flex">
+            <InstallPwaButton />
+          </span>
+          <span className="hidden xl:inline-flex">
+            <CitySelector onNavigate={navigate} />
+          </span>
+          <span className="xl:hidden">
+            <CitySelector onNavigate={navigate} compact />
+          </span>
           <Link
             to="/rescue"
-            className="inline-flex items-center gap-1.5 rounded-xl border border-red-700/50 bg-red-950/40 px-3 py-2 text-xs font-bold uppercase tracking-wide text-red-400 transition-all hover:border-red-600 hover:bg-red-900/40 hover:text-red-300"
+            className={cn(
+              "inline-flex items-center rounded-xl border border-red-700/50 bg-red-950/40 py-2 font-bold uppercase tracking-wide text-red-400 transition-all hover:border-red-600 hover:bg-red-900/40 hover:text-red-300",
+              "xl:gap-1.5 xl:px-3 xl:text-xs",
+              "lg:px-2 lg:text-[10px]"
+            )}
             aria-label="Roadside Rescue — emergency stranded rider mode"
           >
-            <BatteryWarning className="h-3.5 w-3.5 animate-pulse" />
-            Rescue
+            <BatteryWarning className="h-3.5 w-3.5 animate-pulse shrink-0" />
+            <span className="xl:inline">Rescue</span>
           </Link>
           {user ? (
             <>
@@ -143,9 +203,10 @@ export default function Navbar() {
               <UserMenu />
               <Link
                 to="/spots"
-                className="px-3 xl:px-5 py-2 rounded-xl bg-primary text-primary-foreground font-semibold text-xs lg:text-sm hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5 animate-glow"
+                className="px-2.5 xl:px-4 py-2 rounded-xl bg-primary text-primary-foreground font-semibold text-[11px] xl:text-sm whitespace-nowrap hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5 animate-glow"
               >
-                Find a Spot
+                <span className="hidden xl:inline">Find a Spot</span>
+                <span className="inline xl:hidden">Find Spot</span>
               </Link>
             </>
           ) : (
@@ -153,13 +214,13 @@ export default function Navbar() {
               <Button
                 variant="ghost"
                 onClick={() => setLoginModalOpen(true)}
-                className="font-semibold text-xs lg:text-sm xl:text-base px-2.5 xl:px-4"
+                className="font-semibold text-[11px] xl:text-sm px-1.5 xl:px-3 whitespace-nowrap"
               >
                 Sign In
               </Button>
               <Button
                 onClick={() => setLoginModalOpen(true)}
-                className="px-3 xl:px-5 py-2 rounded-xl bg-primary text-primary-foreground font-semibold text-xs lg:text-sm hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5"
+                className="px-2.5 xl:px-4 py-2 rounded-xl bg-primary text-primary-foreground font-semibold text-[11px] xl:text-sm whitespace-nowrap hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5"
               >
                 Get Started
               </Button>

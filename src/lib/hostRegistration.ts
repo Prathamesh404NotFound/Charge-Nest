@@ -1,5 +1,6 @@
 import { database, auth } from "./firebase-services";
 import { sanitizeForDb } from "./bookingService";
+import { facilitiesToAmenities, sanitizeFacilityIds } from "@/lib/facilities";
 import { ref, push, set, serverTimestamp, get, update, remove } from "firebase/database";
 
 interface HostRegistrationData {
@@ -20,6 +21,7 @@ interface HostRegistrationData {
   status: "pending" | "approved" | "rejected";
   createdAt: any;
   googleMapsLink?: string;
+  facilities?: string[];
 }
 
 export interface HostRegistrationInput {
@@ -37,6 +39,7 @@ export interface HostRegistrationInput {
   coordinates: { lat: number; lng: number } | null;
   agreeToTerms: boolean;
   googleMapsLink?: string;
+  facilities?: string[];
 }
 
 export async function submitHostRegistration(data: HostRegistrationInput) {
@@ -66,6 +69,7 @@ export async function submitHostRegistration(data: HostRegistrationInput) {
     status: "pending",
     createdAt: serverTimestamp(),
     googleMapsLink: data.googleMapsLink || "",
+    facilities: Array.isArray(data.facilities) ? sanitizeFacilityIds(data.facilities) : [],
   };
 
   // Save under hostRegistrations/{uid}/ — sanitizeForDb strips any
@@ -191,7 +195,7 @@ export async function updateRegistrationStatus(
           availableHours: registration.availableHours,
           pricePerHour: Number.parseFloat(registration.pricePerHour) || 0,
           pricePerMinute: (Number.parseFloat(registration.pricePerHour) || 0) / 60,
-          amenities: [],
+          amenities: facilitiesToAmenities(registration.facilities || []),
           rating: 0,
           reviews: [],
           totalCharges: 0,

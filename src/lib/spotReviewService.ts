@@ -42,6 +42,7 @@ export interface ListingReview {
   outletType: string;
   pricePerHour: number;
   photos: string[];
+  facilities?: string[];
   coordinates?: { lat: number; lng: number } | null;
   googleMapsLink?: string;
   submittedAt: number;
@@ -71,6 +72,7 @@ function reviewFromSnapshot(id: string, value: Record<string, unknown>): Listing
     outletType: (value.outletType as string) ?? "",
     pricePerHour: Number(value.pricePerHour) || 0,
     photos: (Array.isArray(value.photos) ? value.photos : []) as string[],
+    facilities: Array.isArray(value.facilities) ? (value.facilities as string[]) : undefined,
     coordinates: (value.coordinates as { lat: number; lng: number } | null) ?? null,
     googleMapsLink: value.googleMapsLink as string | undefined,
     submittedAt: (value.submittedAt as number) ?? Date.now(),
@@ -103,6 +105,7 @@ export async function createListingReview(spotId: string, spot: Record<string, u
       outletType: spotValue.outletType ?? "",
       pricePerHour: Number(spotValue.pricePerHour) || 0,
       photos: Array.isArray(spotValue.photos) ? spotValue.photos : [],
+      facilities: Array.isArray(spotValue.facilities) ? spotValue.facilities : undefined,
       coordinates: spotValue.coordinates ?? null,
       googleMapsLink: spotValue.googleMapsLink ?? "",
       submittedAt: Date.now(),

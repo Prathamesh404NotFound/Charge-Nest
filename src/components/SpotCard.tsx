@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, type ReactNode } from "react";
 import { Star, MapPin, Clock, BadgeCheck, Phone, Zap, Heart } from "lucide-react";
+import FacilitiesChips from "@/components/FacilitiesChips";
 import { cn } from "@/lib/utils";
 import { isFavorite, toggleFavorite } from "@/lib/favoritesService";
 import { aggregateRating, getSpotReviews } from "@/lib/reviewsService";
@@ -28,6 +29,7 @@ interface SpotCardProps {
   image?: string;
   outletType?: string;
   availableHours?: string;
+  amenities?: Array<{ id?: string; icon?: string; name?: string }>;
   suggestedStop?: boolean;
   onBook?: () => void;
 }
@@ -70,7 +72,7 @@ const overlayBadgeClass =
 
 export default function SpotCard({
   id, name, host, hostPhone, distance, pricePerHour, rating, reviews,
-  isOpen, isVerified, isFeatured, image, outletType, availableHours, suggestedStop, onBook
+  isOpen, isVerified, isFeatured, image, outletType, availableHours, amenities, suggestedStop, onBook
 }: SpotCardProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -297,6 +299,11 @@ export default function SpotCard({
 
       {/* Content */}
       <div className="p-5 flex flex-col flex-1">
+        {amenities && amenities.length > 0 && (
+          <div className="mb-3">
+            <FacilitiesChips amenities={amenities.slice(0, 4)} />
+          </div>
+        )}
         <h3 className="font-display font-semibold text-lg text-card-foreground group-hover:text-primary transition-colors leading-tight mb-3">
           {name}
         </h3>
