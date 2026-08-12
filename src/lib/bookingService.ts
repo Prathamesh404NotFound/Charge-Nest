@@ -1,6 +1,28 @@
 import { database, auth } from "./firebase-services";
 import { ref, push, set, get, update, serverTimestamp } from "firebase/database";
 
+/** Strip undefined/null/NaN values from an object so Firebase set()/update()
+ * never receives "value argument contains undefined" or silently wipes data.
+ * Empty strings are preserved (intentional blank field, not missing data). */
+export function sanitizeForDb<T extends Record<string, unknown>>(payload: T): T {
+  const cleaned: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(payload)) {
+    if (value === undefined || value === null) continue;
+    if (typeof value === "number" && !Number.isFinite(value)) continue;
+    if (value && typeof value === "object" && !Array.isArray(value) && !(value instanceof Date)) {
+      // Recursively clean nested objects (e.g. coordinates) but skip raw
+      // firebase values like serverTimestamp() which are special instances.
+      if (typeof (value as any).toJSON !== "function") {
+        const nested = sanitizeForDb(value as Record<string, unknown>);
+        if (Object.keys(nested).length > 0) cleaned[key] = nested;
+        continue;
+      }
+    }
+    cleaned[key] = value;
+  }
+  return cleaned as T;
+}
+
 export interface BookingRequest {
   id: string;
   spotId: string;
@@ -79,14 +101,14 @@ export async function submitBookingRequest(
   const pricePerHour = Math.max(0, Number(spot.pricePerHour) || 0);
   const requestsRef = ref(database, `chargingRequests/${user.uid}`);
   const newRef = push(requestsRef);
-  const bookingPayload = {
+  const bookingPayload = sanitizeForDb({
     spotId: data.spotId,
     spotName: spot.name || data.spotName,
     hostName: spot.hostName || data.hostName,
     hostPhone: spot.hostPhone || data.hostPhone,
     userId: user.uid,
     userName: user.displayName || "",
-    userPhone: data.userPhone,
+    userPhone: data.userPhone || "",
     userEmail: user.email || "",
     requestedAt: serverTimestamp(),
     duration,
@@ -102,7 +124,7 @@ export async function submitBookingRequest(
     depositStatus: data.depositStatus || (Number.isFinite(Number(data.depositAmount)) && Number(data.depositAmount) > 0 ? "pending" : "none"),
     cfOrderId: data.cfOrderId || undefined,
     cfPaymentSessionId: data.cfPaymentSessionId || undefined,
-  };
+  });
   await set(newRef, bookingPayload);
   await set(ref(database, `spotRequests/${data.spotId}/${newRef.key}`), bookingPayload);
   return newRef.key!;

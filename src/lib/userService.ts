@@ -1,4 +1,5 @@
 import { database, auth } from "./firebase-services";
+import { sanitizeForDb } from "./bookingService";
 import { ref, get, set, update, serverTimestamp } from "firebase/database";
 
 export interface UserProfile {
@@ -57,7 +58,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile> {
   // First time: bootstrap from Firebase Auth
   const firebaseUser = auth.currentUser;
   const defaults = DEFAULT_PROFILE(firebaseUser || { uid });
-  await set(userRef, { ...defaults, createdAt: serverTimestamp() });
+  await set(userRef, sanitizeForDb({ ...defaults, createdAt: serverTimestamp() }));
   return { ...defaults, uid } as UserProfile;
 }
 
@@ -70,10 +71,12 @@ export async function updateUserProfile(uid: string, data: Partial<UserProfile>)
   const allowed: Partial<UserProfile> = {};
   if (typeof data.displayName === "string") allowed.displayName = data.displayName.trim().slice(0, 80);
   if (typeof data.phone === "string") allowed.phone = data.phone.trim().slice(0, 30);
-  if (data.photoURL === undefined || typeof data.photoURL === "string") allowed.photoURL = data.photoURL;
+  if (typeof data.photoURL === "string") allowed.photoURL = data.photoURL;
   if (data.preferences) allowed.preferences = data.preferences;
 
-  await update(ref(database, `users/${uid}`), { ...allowed, updatedAt: serverTimestamp() });
+  // sanitizeForDb drops undefined values — a previous version could write
+  // { photoURL: undefined } into the profile and crash the RTDB write.
+  await update(ref(database, `users/${uid}`), sanitizeForDb({ ...allowed, updatedAt: serverTimestamp() }));
 }
 
 /** Update notification preferences */
@@ -85,5 +88,5 @@ export async function updateNotificationPrefs(
   if (!auth.currentUser || auth.currentUser.uid !== uid) {
     throw new Error("You can only update your own notification preferences.");
   }
-  await set(prefRef, prefs);
+  await set(prefRef, sanitizeForDb(prefs as Record<string, unknown>));
 }

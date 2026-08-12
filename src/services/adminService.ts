@@ -323,11 +323,15 @@ export const adminGetSystemStats = async () => {
     const pendingRequests = requests.filter(req => req.status === 'pending');
     const completedRequests = requests.filter(req => req.status === 'completed');
 
-    // Calculate revenue (simplified - in real implementation, this would be calculated from actual payments)
-    const totalRevenue = completedRequests.reduce((sum, req) => {
-      // This would come from actual payment data
-      return sum + (req.duration * 50); // Assuming avg 50 INR per hour
-    }, 0);
+    // Revenue from completed booking sessions, priced per spot's own rate
+    // (pricePerHour converted from minutes: duration/60). Falls back to the
+    // booking's stored estimatedCost when the spot rate is unavailable.
+    const bookingRevenue = (req: ChargingRequest) => {
+      if (typeof (req as any).estimatedCost === 'number') return Math.max(0, (req as any).estimatedCost);
+      const pph = Number((req as any).pricePerHour) || 0;
+      return (pph * Number(req.duration || 0)) / 60;
+    };
+    const totalRevenue = completedRequests.reduce((sum, req) => sum + bookingRevenue(req), 0);
 
     return {
       totalUsers: users.length,
@@ -362,7 +366,9 @@ export const adminGetTopSpots = async (limit: number = 5): Promise<Array<{
       const completedRequests = spotRequests.filter(req => req.status === 'completed');
 
       const revenue = completedRequests.reduce((sum, req) => {
-        return sum + (req.duration * spot.pricePerHour);
+        // Minutes, not hours: duration/60. Also respect the stored estimate.
+        if (typeof (req as any).estimatedCost === 'number') return sum + Math.max(0, (req as any).estimatedCost);
+        return sum + (spot.pricePerHour * Number(req.duration || 0)) / 60;
       }, 0);
 
       return {
@@ -616,4 +622,178 @@ export const adminGetRequestsPaginated = async (
     console.error('Error fetching paginated requests:', error);
     throw new Error('Failed to fetch paginated requests');
   }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Analytics APIs (timeline, funnel, city breakdown, deposits)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function toBucketKey(ts: number, bucketDays: number): string {
+  const d = new Date(ts);
+  if (bucketDays <= 1) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+  // Weekly buckets keyed by the Monday of the week
+  const day = d.getDay(); // 0=Sun..6=Sat; shift so Monday is week start
+  const monday = new Date(d);
+  monday.setDate(d.getDate() - ((day + 6) % 7));
+  return monday.toISOString().slice(0, 10);
+}
+
+/** Daily (7d) or weekly (30d/90d) buckets of bookings, completions, revenue,
+ * and new users — used by the analytics combo chart. */
+export const adminGetBookingTimeline = async (
+  period: '7d' | '30d' | '90d'
+): Promise<
+  Array<{
+    date: string;
+    bookings: number;
+    completed: number;
+    rejected: number;
+    revenue: number;
+    emergencyBookings: number;
+    newUsers: number;
+  }>
+> => {
+  const bucketDays = period === '7d' ? 1 : 7;
+  const days = period === '7d' ? 7 : period === '30d' ? 30 : 90;
+  const now = Date.now();
+  const cutoff = now - days * 24 * 60 * 60 * 1000;
+
+  const [users, requests] = await Promise.all([adminGetAllUsers(), adminGetAllRequests()]);
+
+  const timeline: Record<string, { bookings: number; completed: number; rejected: number; revenue: number; emergencyBookings: number; newUsers: number }> = {};
+  // Seed every bucket so the chart always spans the full period
+  const bucketCount = Math.ceil(days / bucketDays);
+  const seedKey = (daysBack: number) => {
+    const d = new Date(now - daysBack * 24 * 60 * 60 * 1000);
+    return toBucketKey(d.getTime(), bucketDays);
+  };
+  for (let i = 0; i < bucketCount; i++) {
+    const key = seedKey(days - 1 - i * bucketDays);
+    timeline[key] = { bookings: 0, completed: 0, rejected: 0, revenue: 0, emergencyBookings: 0, newUsers: 0 };
+  }
+
+  const revenueOf = (req: any) => {
+    if (typeof req.estimatedCost === 'number') return Math.max(0, req.estimatedCost);
+    const pph = Number(req.pricePerHour) || 0;
+    return (pph * Number(req.duration || 0)) / 60;
+  };
+
+  requests.forEach((req: any) => {
+    const ts = typeof req.requestedAt === 'number' ? req.requestedAt : 0;
+    if (!ts || ts < cutoff) return;
+    const key = toBucketKey(ts, bucketDays);
+    const cell = timeline[key] || (timeline[key] = { bookings: 0, completed: 0, rejected: 0, revenue: 0, emergencyBookings: 0, newUsers: 0 });
+    cell.bookings += 1;
+    if (req.status === 'completed') {
+      cell.completed += 1;
+      cell.revenue += revenueOf(req);
+    }
+    if (req.status === 'rejected' || req.status === 'cancelled') cell.rejected += 1;
+    if (req.emergency) cell.emergencyBookings += 1;
+  });
+
+  users.forEach((user: any) => {
+    const ts = user.createdAt ? user.createdAt.getTime() : 0;
+    if (!ts || ts < cutoff) return;
+    const key = toBucketKey(ts, bucketDays);
+    const cell = timeline[key] || (timeline[key] = { bookings: 0, completed: 0, rejected: 0, revenue: 0, emergencyBookings: 0, newUsers: 0 });
+    cell.newUsers += 1;
+  });
+
+  return Object.keys(timeline)
+    .sort()
+    .map((date) => ({
+      date,
+      bookings: timeline[date].bookings,
+      completed: timeline[date].completed,
+      rejected: timeline[date].rejected,
+      revenue: Math.round(timeline[date].revenue * 100) / 100,
+      emergencyBookings: timeline[date].emergencyBookings,
+      newUsers: timeline[date].newUsers,
+    }));
+};
+
+export interface StatusFunnel {
+  pending: number;
+  approved: number;
+  completed: number;
+  cancelled: number;
+  rejected: number;
+  emergency: number;
+  paidDeposits: number;
+  conversionRate: number; // completed / bookings that left pending
+}
+
+/** Booking status funnel: how many requests enter, get approved, complete,
+ * and how many were emergencies or paid deposits. */
+export const adminGetStatusFunnel = async (): Promise<StatusFunnel> => {
+  const requests = await adminGetAllRequests();
+  const count = (s: string) => requests.filter((r) => r.status === s).length;
+  const pending = count('pending');
+  const approved = count('approved');
+  const completed = count('completed');
+  const cancelled = count('cancelled');
+  const rejected = count('rejected');
+  const emergency = requests.filter((r: any) => r.emergency).length;
+  const paidDeposits = requests.filter((r: any) => r.depositStatus === 'paid').length;
+  const conversionDenominator = approved + completed + cancelled + rejected;
+  const conversionRate = conversionDenominator > 0 ? Math.round((completed / conversionDenominator) * 1000) / 10 : 0;
+  return { pending, approved, completed, cancelled, rejected, emergency, paidDeposits, conversionRate };
+};
+
+export interface CityBreakdown {
+  city: string;
+  bookings: number;
+  completed: number;
+  revenue: number;
+  spots: number;
+}
+
+/** Revenue and demand breakdown per city from live bookings and spots. */
+export const adminGetCityBreakdown = async (): Promise<CityBreakdown[]> => {
+  const [spots, requests] = await Promise.all([adminGetAllSpots(), adminGetAllRequests()]);
+  const byCity: Record<string, CityBreakdown> = {};
+  const cell = (city: string) =>
+    byCity[city] || (byCity[city] = { city, bookings: 0, completed: 0, revenue: 0, spots: 0 });
+  spots.forEach((spot) => {
+    const c = (spot.city || '').trim() || 'Unassigned';
+    cell(c).spots += 1;
+  });
+  requests.forEach((req: any) => {
+    const c = ((req as any).city || '').trim() || 'Unassigned';
+    const entry = cell(c);
+    entry.bookings += 1;
+    if (req.status === 'completed') {
+      entry.completed += 1;
+      entry.revenue += typeof req.estimatedCost === 'number' ? Math.max(0, req.estimatedCost) : (Number(req.pricePerHour) || 0) * Number(req.duration || 0) / 60;
+    }
+  });
+  return Object.values(byCity)
+    .filter((c) => c.bookings > 0 || c.spots > 0)
+    .sort((a, b) => b.revenue - a.revenue)
+    .map((c) => ({ ...c, revenue: Math.round(c.revenue * 100) / 100 }));
+};
+
+export interface DepositsSummary {
+  collected: number;
+  pending: number;
+  failed: number;
+  emergencyBookings: number;
+}
+
+/** Summary of Cashfree deposit collection across all bookings. */
+export const adminGetDepositsSummary = async (): Promise<DepositsSummary> => {
+  const requests = await adminGetAllRequests();
+  const byStatus = (s: string) => requests.filter((r: any) => r.depositStatus === s).length;
+  const collected = requests
+    .filter((r: any) => r.depositStatus === 'paid' && typeof r.depositAmount === 'number')
+    .reduce((sum, r) => sum + Number(r.depositAmount), 0);
+  return {
+    collected: Math.round(collected * 100) / 100,
+    pending: byStatus('pending'),
+    failed: byStatus('failed'),
+    emergencyBookings: requests.filter((r: any) => r.emergency).length,
+  };
 };

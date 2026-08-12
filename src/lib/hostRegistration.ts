@@ -1,4 +1,5 @@
 import { database, auth } from "./firebase-services";
+import { sanitizeForDb } from "./bookingService";
 import { ref, push, set, serverTimestamp, get, update, remove } from "firebase/database";
 
 interface HostRegistrationData {
@@ -67,10 +68,11 @@ export async function submitHostRegistration(data: HostRegistrationInput) {
     googleMapsLink: data.googleMapsLink || "",
   };
 
-  // Save under hostRegistrations/{uid}/
+  // Save under hostRegistrations/{uid}/ — sanitizeForDb strips any
+  // undefined/null/NaN value that would crash Firebase set().
   const userRegistrationsRef = ref(database, `hostRegistrations/${user.uid}`);
   const newRegistrationRef = push(userRegistrationsRef);
-  await set(newRegistrationRef, registrationData);
+  await set(newRegistrationRef, sanitizeForDb(registrationData));
 
   // Listings are created only after an administrator reviews the registration.
   // Never self-promote the account or publish an unverified spot from the client.
@@ -170,7 +172,7 @@ export async function updateRegistrationStatus(
 
       if (!existingSpot) {
         const newSpotRef = push(spotsRef);
-        await set(newSpotRef, {
+        await set(newSpotRef, sanitizeForDb({
           registrationId,
           hostId: userId,
           hostName: registration.fullName,
@@ -199,7 +201,7 @@ export async function updateRegistrationStatus(
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
           googleMapsLink: registration.googleMapsLink || "",
-        });
+        }));
       }
 
       await update(ref(database, `users/${userId}`), {
@@ -223,7 +225,7 @@ export async function updateRegistrationStatus(
 export async function updateSpot(spotId: string, data: any) {
   try {
     const spotRef = ref(database, `chargingSpots/${spotId}`);
-    await update(spotRef, { ...data, updatedAt: serverTimestamp() });
+    await update(spotRef, sanitizeForDb({ ...data, updatedAt: serverTimestamp() }));
     return true;
   } catch (error) {
     console.error("Error updating spot:", error);

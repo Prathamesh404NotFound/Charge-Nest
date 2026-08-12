@@ -13,6 +13,7 @@
  */
 import { get, push, ref, serverTimestamp, update } from "firebase/database";
 import { database } from "./firebase-services";
+import { sanitizeForDb } from "./bookingService";
 import type { Review } from "@/types";
 
 export interface ReviewInput {
@@ -68,10 +69,11 @@ export async function submitSpotReview(input: ReviewInput): Promise<Review> {
     helpful: 0,
     response: undefined,
   } as Review;
-
   const reviewsRef = ref(database, `spotReviews/${input.spotId}`);
   const newRef = push(reviewsRef);
-  await update(newRef, review);
+  // sanitizeForDb strips undefined values (userPhoto/response/photos) that
+  // would crash Firebase update() with "value argument contains undefined".
+  await update(newRef, sanitizeForDb(review as Record<string, unknown>) as Review);
   return { id: newRef.key ?? "", ...review } as Review;
 }
 
