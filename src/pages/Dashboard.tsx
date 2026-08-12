@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { User, MapPin, Clock, DollarSign, Zap, TrendingUp, History, Settings, Car } from "lucide-react";
+import { User, MapPin, Clock, DollarSign, Zap, TrendingUp, History, Settings, Car, Heart } from "lucide-react";
 import { useAuth } from "@/components/Auth/AuthProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -98,6 +98,12 @@ export default function Dashboard() {
               Find Spots
             </Link>
           </Button>
+          <Button variant="outline" className="gap-2" asChild>
+            <Link to="/saved">
+              <Heart className="w-4 h-4" />
+              Saved Spots
+            </Link>
+          </Button>
         </div>
       </div>
 
@@ -141,7 +147,8 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
+        <Card className="rounded-2xl hover:-translate-y-1 hover:shadow-xl transition-all duration-300" asChild>
+          <Link to="/saved">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Saved CO₂</CardTitle>
             <div className="w-10 h-10 rounded-xl gradient-green flex items-center justify-center">
@@ -152,6 +159,7 @@ export default function Dashboard() {
             <div className="text-2xl font-bold">{completedCount * 4 || "—"} kg</div>
             <p className="text-xs text-muted-foreground">Estimated at ~4kg CO₂ per charge vs. petrol scooter</p>
           </CardContent>
+          </Link>
         </Card>
       </div>
 

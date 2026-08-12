@@ -313,3 +313,112 @@
 .dark .glass { @apply bg-card/80 border-white/10; }
 .dark .surface-card { box-shadow: 0 18px 50px hsl(0 0% 0% / 0.2); }
 
+
+/* === Round 3A: premium motion & typography layer (top-design) === */
+@layer utilities {
+  .display-tight {
+    letter-spacing: -0.035em;
+    line-height: 1.02;
+  }
+  .tracking-squish {
+    letter-spacing: -0.02em;
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+  /* Explicit visible space between inline-block hero words (whitespace is normally collapsed) */
+  .hero-word-gap {
+    display: inline;
+    margin-right: 0.28em;
+  }
+  /* Staggered hero word reveal — each phrase rises on its own expo-out curve */
+  .hero-word {
+    display: inline-block;
+    opacity: 0;
+    transform: translateY(24px);
+    animation: heroWordIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .hero-word-d1 { animation-delay: 0.2s; }
+  .hero-word-d2 { animation-delay: 0.3s; }
+  .hero-word-d3 { animation-delay: 0.4s; }
+  .hero-word-d4 { animation-delay: 0.5s; }
+  .hero-word-d5 { animation-delay: 0.6s; }
+  .hero-sub {
+    opacity: 0;
+    transform: translateY(16px);
+    animation: heroWordIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.7s forwards;
+  }
+  .hero-cta {
+    opacity: 0;
+    transform: translateY(16px);
+    animation: heroWordIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.85s forwards;
+  }
+  .hero-proof {
+    opacity: 0;
+    transform: translateY(12px);
+    animation: heroWordIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) 1.0s forwards;
+  }
+  .hero-media {
+    opacity: 0;
+    transform: translateY(32px) scale(0.97);
+    animation: heroMediaIn 1s cubic-bezier(0.16, 1, 0.3, 1) 0.55s forwards;
+  }
+  /* Horizontal marquee for city strip / trust ticker */
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    animation: marquee 38s linear infinite;
+  }
+  /* Spring-ish button lift on hover */
+  .magnet-lift {
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .magnet-lift:hover {
+    transform: translateY(-3px);
+  }
+  /* Soft grain overlay for the dark electric section */
+  .grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .charge-line {
+    position: relative;
+    overflow: hidden;
+  }
+  .charge-line::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, hsl(217 91% 60% / 0.75), transparent);
+    animation: chargeLine 2.8s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  }
+}
+
+@keyframes heroWordIn {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes heroMediaIn {
+  from { opacity: 0; transform: translateY(32px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes chargeLine {
+  0% { transform: translateX(-100%); }
+  60%, 100% { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-word, .hero-sub, .hero-cta, .hero-proof, .hero-media, .marquee-track, .charge-line::after {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

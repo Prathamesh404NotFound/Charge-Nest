@@ -10,6 +10,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import FloatingButtons from "@/components/FloatingButtons";
 import AdminRoute from "@/components/Admin/AdminRoute";
+import AuthenticatedRoute from "@/components/AuthenticatedRoute";
 import AdminLayoutPage from "@/components/Admin/AdminLayoutPage";
 import { AuthProvider, useAuth } from "@/components/Auth/AuthProvider";
 import Index from "./pages/Index";
@@ -17,12 +18,14 @@ import FindSpots from "./pages/FindSpots";
 import BecomeHost from "./pages/BecomeHost";
 import HowItWorks from "./pages/HowItWorks";
 import Pricing from "./pages/Pricing";
+import CityKolhapur from "./pages/CityKolhapur";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Dashboard from "./pages/Dashboard";
 import BookingHistory from "./pages/BookingHistory";
 import Earnings from "./pages/Earnings";
 import Settings from "./pages/Settings";
+import SavedSpots from "./pages/SavedSpots";
 import NotFound from "./pages/NotFound";
 import AdminDashboardPage from "./pages/Admin/AdminDashboardPage";
 import AdminUsersPage from "./pages/Admin/AdminUsersPage";
@@ -42,19 +45,6 @@ function ScrollToTop() {
   return null;
 }
 
-function AuthenticatedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center" aria-live="polite">Loading your account…</div>;
-  }
-
-  if (!user) {
-    return <Navigate to="/" replace state={{ authRequired: true }} />;
-  }
-
-  return <>{children}</>;
-}
 
 function AppContent() {
   const location = useLocation();
@@ -93,6 +83,7 @@ function AppContent() {
         <Route path="/host" element={<BecomeHost />} />
         <Route path="/how-it-works" element={<HowItWorks />} />
         <Route path="/pricing" element={<Pricing />} />
+        <Route path="/kolhapur" element={<CityKolhapur />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/dashboard" element={
@@ -120,6 +111,13 @@ function AppContent() {
           <AuthenticatedRoute>
             <main className="min-h-screen pt-24 responsive-container container-lg">
               <Settings />
+            </main>
+          </AuthenticatedRoute>
+        } />
+        <Route path="/saved" element={
+          <AuthenticatedRoute>
+            <main className="min-h-screen pt-24 responsive-container container-lg">
+              <SavedSpots />
             </main>
           </AuthenticatedRoute>
         } />

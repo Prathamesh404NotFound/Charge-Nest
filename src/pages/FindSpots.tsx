@@ -360,19 +360,34 @@ export default function FindSpots() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
             <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-none flex-1">
               <SlidersHorizontal className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-              {filters.map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setActiveFilter(f)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-                    activeFilter === f
-                      ? "bg-primary text-primary-foreground shadow-md"
-                      : "bg-card border border-border text-muted-foreground hover:bg-muted"
-                  }`}
-                >
-                  {f}
-                </button>
-              ))}
+              {filters.map((f) => {
+                let count: number | null = null;
+                if (f === "Open Now") count = spotsWithDistance.filter((s) => isSpotOpen(s.availableHours)).length;
+                else if (f === "Verified") count = spotsWithDistance.filter((s) => s.isVerified).length;
+                else if (f === "Under Rs 50") count = spotsWithDistance.filter((s) => s.pricePerHour < 50).length;
+                else if (f === "Top Rated") count = spotsWithDistance.filter((s) => s.rating >= 4.5).length;
+                else if (f === "Nearest") count = spotsWithDistance.filter((s) => s.distance !== null).length;
+                else if (f === "All") count = spotsWithDistance.length;
+                return (
+                  <button
+                    key={f}
+                    onClick={() => setActiveFilter(f)}
+                    aria-pressed={activeFilter === f}
+                    className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                      activeFilter === f
+                        ? "bg-primary text-primary-foreground shadow-md"
+                        : "bg-card border border-border text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {f}
+                    {count !== null && (
+                      <span className={`ml-1.5 text-[11px] font-bold ${activeFilter === f ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
             <div className="flex items-center bg-card border border-border p-1 rounded-full w-fit flex-shrink-0">

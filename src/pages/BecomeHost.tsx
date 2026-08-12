@@ -8,6 +8,7 @@ import FeatureCard from "@/components/FeatureCard";
 import FAQAccordion from "@/components/FAQAccordion";
 import CTABanner from "@/components/CTABanner";
 import HostRegistrationModal from "@/components/HostRegistration/HostRegistrationModal";
+import EarningsEstimator from "@/components/EarningsEstimator";
 import { Button } from "@/components/ui/button";
 import GoogleLoginModal from "@/components/Auth/GoogleLoginModal";
 import SEO from "@/components/SEO";
@@ -155,24 +156,8 @@ export default function BecomeHost() {
             </h2>
             <p className="text-muted-foreground max-w-lg mx-auto">See how much you could earn based on average rider traffic in your area.</p>
           </div>
-          <div className="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto reveal">
-            {[
-              { period: "Daily", amount: "Rs 100 – Rs 200", sessions: "2–4 sessions", icon: Zap },
-              { period: "Weekly", amount: "Rs 700 – Rs 1,400", sessions: "14–28 sessions", icon: TrendingUp },
-              { period: "Monthly", amount: "Rs 3,000 – Rs 5,000+", sessions: "60–120 sessions", icon: DollarSign },
-            ].map((e, i) => {
-              const Icon = e.icon;
-              return (
-                <div key={i} className="text-center p-8 rounded-2xl bg-card border border-border shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
-                  <div className="w-12 h-12 mx-auto rounded-xl bg-ev-green/10 group-hover:bg-ev-green/20 transition-colors duration-300 flex items-center justify-center mb-4">
-                    <Icon className="w-6 h-6 text-ev-green" />
-                  </div>
-                  <div className="text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-2">{e.period}</div>
-                  <div className="font-display font-bold text-2xl text-ev-green mb-1">{e.amount}</div>
-                  <div className="text-xs text-muted-foreground">{e.sessions}</div>
-                </div>
-              );
-            })}
+          <div className="max-w-3xl mx-auto reveal">
+            <EarningsEstimator />
           </div>
         </div>
       </section>

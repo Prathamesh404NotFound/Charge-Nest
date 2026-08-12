@@ -6,14 +6,15 @@ const navLinks = [
   { to: "/host",         label: "Become a Host" },
   { to: "/how-it-works", label: "How It Works" },
   { to: "/pricing",      label: "Pricing" },
+  { to: "/kolhapur",     label: "Kolhapur" },
   { to: "/about",        label: "About Us" },
   { to: "/contact",      label: "Contact" },
 ];
 
 const legalLinks = [
-  { to: "#", label: "Privacy Policy" },
-  { to: "#", label: "Terms of Service" },
-  { to: "#", label: "Safety Guidelines" },
+  { href: "#", label: "Privacy Policy" },
+  { href: "#", label: "Terms of Service" },
+  { href: "#", label: "Safety Guidelines" },
 ];
 
 export default function Footer() {
@@ -76,13 +77,14 @@ export default function Footer() {
           </p>
           <div className="flex flex-wrap gap-x-4 gap-y-2">
             {legalLinks.map((link) => (
-              <Link
+              <a
                 key={link.label}
-                to={link.to}
+                href={link.href}
+                onClick={(e) => e.preventDefault()}
                 className="text-xs text-white/35 hover:text-white/70 transition-colors"
               >
                 {link.label}
-              </Link>
+              </a>
             ))}
           </div>
         </div>

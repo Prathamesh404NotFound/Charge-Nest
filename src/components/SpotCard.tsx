@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo, type ReactNode } from "react";
 import { Star, MapPin, Clock, BadgeCheck, Phone, Zap, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isFavorite, toggleFavorite } from "@/lib/favoritesService";
+import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "./Auth/AuthProvider";
 import { Button } from "@/components/ui/button";
 import GoogleLoginModal from "./Auth/GoogleLoginModal";
@@ -69,8 +71,11 @@ export default function SpotCard({
   isOpen, isVerified, isFeatured, image, outletType, availableHours, suggestedStop, onBook
 }: SpotCardProps) {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [saved, setSaved] = useState<boolean>(() =>
+    user ? isFavorite(user.uid, id ?? "") : false
+  );
   const [imgError, setImgError] = useState(false);
   // null = no record yet (omit badge), non-null = live data
   const [availability, setAvailability] = useState<SpotAvailability | null | undefined>(undefined);
@@ -250,7 +255,19 @@ export default function SpotCard({
             aria-pressed={saved}
             onClick={(e) => {
               e.stopPropagation();
-              setSaved((prev) => !prev);
+              if (!user) {
+                setShowLoginModal(true);
+                toast({ title: "Sign in to save spots", description: "Your saved spots travel with your account." });
+                return;
+              }
+              const result = toggleFavorite(user.uid, {
+                id: id ?? "",
+                name,
+                host,
+                pricePerHour,
+              });
+              setSaved(result === "saved");
+              toast({ title: result === "saved" ? "Spot saved" : "Spot removed" });
             }}
             className="flex items-center justify-center w-8 h-8 rounded-full bg-black/50 backdrop-blur-md text-white shadow-sm hover:bg-black/65 transition-colors"
           >
