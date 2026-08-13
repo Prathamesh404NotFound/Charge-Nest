@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { submitBookingRequest } from "@/lib/bookingService";
-import { computeDepositAmount, startDepositPayment } from "@/lib/paymentsService";
+import { computeDepositAmount, startDepositPayment, isPaymentsEnabled } from "@/lib/paymentsService";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/components/Auth/AuthProvider";
 import { cn } from "@/lib/utils";
