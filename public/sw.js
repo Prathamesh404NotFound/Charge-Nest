@@ -21,7 +21,7 @@
  * - Images                     : stale-while-revalidate
  * - Firebase / map tiles       : network-first, no caching (live data)
  */
-const CACHE_SHELL = "voltsetu-shell-v2";
+const CACHE_SHELL = "voltsetu-shell-v3";
 const CACHE_IMAGES = "voltsetu-images-v1";
 const MAX_IMAGE_CACHE = 80;
 

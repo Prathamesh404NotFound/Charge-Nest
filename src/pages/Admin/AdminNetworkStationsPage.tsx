@@ -964,6 +964,20 @@ const AdminNetworkStationsPage: React.FC = () => {
                     <div className="text-sm text-yellow-600">Skipped (duplicates)</div>
                   </div>
                 </div>
+                {Array.isArray(importResult.errors) && importResult.errors.length > 0 && (
+                  <div className="space-y-2 max-h-72 overflow-y-auto">
+                    {importResult.errors.slice(0, 50).map((err: any, idx: number) => (
+                      <div key={idx} className="text-sm p-3 bg-red-50 border border-red-200 rounded-md text-red-800">
+                        <span className="font-semibold">Row {err.row ?? '?'}:</span> {err.message || err}
+                        {err.field ? ` (${err.field})` : ''}
+                        {err.data?.stationName ? ` — "${err.data.stationName}"` : ''}
+                      </div>
+                    ))}
+                    {importResult.errors.length > 50 && (
+                      <div className="text-sm text-muted-foreground">…and {importResult.errors.length - 50} more errors</div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
