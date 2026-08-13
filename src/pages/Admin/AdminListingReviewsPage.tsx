@@ -44,6 +44,10 @@ export default function AdminListingReviewsPage() {
   const [selected, setSelected] = useState<ListingReview | null>(null);
   const [note, setNote] = useState("");
   const [deciding, setDeciding] = useState(false);
+  // Bulk actions (Round 15)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkNote, setBulkNote] = useState("");
+  const [bulkDeciding, setBulkDeciding] = useState(false);
 
   const fetchReviews = async () => {
     setLoading(true);
@@ -113,6 +117,42 @@ export default function AdminListingReviewsPage() {
       setDeciding(false);
     }
   }
+
+  /** Bulk decision across the pending queue; per-item error isolation. */
+  async function bulkDecide(decision: "approved" | "rejected") {
+    if (!user) return;
+    const ids = [...selectedIds].filter((id) =>
+      reviews.some((r) => r.spotId === id && r.status === "pending_review")
+    );
+    if (ids.length === 0) return;
+    if (decision === "rejected" && !bulkNote.trim()) {
+      toast.error("Add one shared rejection note so every host sees what to fix.");
+      return;
+    }
+    setBulkDeciding(true);
+    let ok = 0;
+    let fail = 0;
+    for (const spotId of ids) {
+      try {
+        const result = await decideListingReview(spotId, decision, bulkNote.trim(), user.uid);
+        if (result.ok) ok++;
+        else fail++;
+      } catch {
+        fail++;
+      }
+    }
+    setBulkNote("");
+    setSelectedIds(new Set());
+    if (ok) toast.success(`${ok} listing${ok > 1 ? "s" : ""} ${decision}${fail ? ` · ${fail} failed` : ""}`);
+    if (fail) toast.error(`${fail} listing${fail > 1 ? "s" : ""} could not be updated`);
+    setBulkDeciding(false);
+    void fetchReviews();
+  }
+
+  const pendingIds = filtered.filter((r) => r.status === "pending_review").map((r) => r.spotId);
+  const allPendingSelected =
+    pendingIds.length > 0 && pendingIds.every((id) => selectedIds.has(id));
+  const bulkCount = [...selectedIds].filter((id) => pendingIds.includes(id)).length;
 
   return (
     <AdminLayoutPage title="Listing Reviews" subtitle="Quality control — approve or reject new spot listings before they go live">
@@ -198,6 +238,55 @@ export default function AdminListingReviewsPage() {
           ))}
         </div>
 
+        {/* Bulk actions toolbar */}
+        {pendingIds.length > 0 && (
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-emerald-600/30 bg-emerald-600/5 p-3">
+            <label className="inline-flex items-center gap-2 text-sm font-medium cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={allPendingSelected}
+                onChange={(e) =>
+                  setSelectedIds(e.target.checked ? new Set(pendingIds) : new Set())
+                }
+                className="w-4 h-4 rounded border-slate-300 accent-emerald-600"
+              />
+              Select {allPendingSelected ? "all" : `none`} ({pendingIds.length} pending)
+            </label>
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              {bulkCount > 0 ? (
+                <>
+                  <Textarea
+                    placeholder="Shared note (rejection reason)"
+                    value={bulkNote}
+                    onChange={(e) => setBulkNote(e.target.value)}
+                    rows={1}
+                    className="min-h-8 text-xs w-56"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={bulkDeciding}
+                    className="border-rose-200 text-rose-700 hover:bg-rose-50"
+                    onClick={() => void bulkDecide("rejected")}
+                  >
+                    <XCircle className="w-3.5 h-3.5 mr-1" /> Reject {bulkCount}
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={bulkDeciding}
+                    className="bg-emerald-600 text-white hover:bg-emerald-700"
+                    onClick={() => void bulkDecide("approved")}
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Approve {bulkCount}
+                  </Button>
+                </>
+              ) : (
+                <span className="text-xs text-slate-500">Select pending listings to approve or reject in bulk</span>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Review queue */}
         {loading ? (
           <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
@@ -214,14 +303,35 @@ export default function AdminListingReviewsPage() {
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
-            {filtered.map(r => (
+            {filtered.map(r => {
+              const isSelectable = r.status === "pending_review";
+              return (
               <div key={r.spotId} className="flex flex-col rounded-lg border border-slate-200 bg-white p-4">
                 <div className="flex items-start justify-between gap-2">
-                  <div>
+                  <div className="flex items-start gap-2.5">
+                    {isSelectable && (
+                      <label className="mt-0.5 cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(r.spotId)}
+                          onChange={() =>
+                            setSelectedIds((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(r.spotId)) next.delete(r.spotId); else next.add(r.spotId);
+                              return next;
+                            })
+                          }
+                          aria-label={`Select ${r.name} for bulk action`}
+                          className="w-4 h-4 rounded border-slate-300 accent-emerald-600"
+                        />
+                      </label>
+                    )}
+                    <div>
                     <h4 className="font-semibold text-slate-900">{r.name}</h4>
                     <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-500">
                       <MapPin className="h-3 w-3" /> {r.address}, {r.city}
                     </p>
+                    </div>
                   </div>
                   <Badge
                     className={
@@ -254,7 +364,8 @@ export default function AdminListingReviewsPage() {
                   </Button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

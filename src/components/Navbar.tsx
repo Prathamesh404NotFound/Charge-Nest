@@ -12,6 +12,7 @@ import { useT, useLang } from "@/lib/i18n";
 import { requestNotificationPermission } from "@/lib/browserNotifications";
 import { CITIES, getCityBySlug } from "@/lib/cities";
 import { InstallPwaButton } from "@/components/InstallPwaButton";
+import ThemeToggle from "@/components/ThemeToggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -203,6 +204,7 @@ export default function Navbar() {
           </Link>
           {user ? (
             <>
+              <ThemeToggle />
               <NotificationBell />
               <UserMenu />
               <Link
@@ -215,6 +217,7 @@ export default function Navbar() {
             </>
           ) : (
             <>
+              <ThemeToggle />
               <Button
                 variant="ghost"
                 onClick={() => setLoginModalOpen(true)}
@@ -248,7 +251,8 @@ export default function Navbar() {
       {mobileOpen && (
         <div id="mobile-navigation" className="lg:hidden absolute top-full left-0 right-0 glass border-t border-border animate-slide-down">
           <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-col gap-1">
-            <div className="flex items-center justify-end mb-1">
+            <div className="flex items-center justify-end gap-2 mb-1">
+              <ThemeToggle compact />
               <button
                 type="button"
                 onClick={() => setLang(lang === "hi" ? "en" : "hi")}

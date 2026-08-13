@@ -14,6 +14,7 @@ import AuthenticatedRoute from "@/components/AuthenticatedRoute";
 import AdminLayoutPage from "@/components/Admin/AdminLayoutPage";
 import { AuthProvider, useAuth } from "@/components/Auth/AuthProvider";
 import { LanguageProvider } from "@/lib/i18n";
+import { ThemeProvider, applyStoredTheme } from "@/lib/theme";
 import { LazyPage } from "@/components/LazyPage";
 import NotFound from "./pages/NotFound";
 import '@/styles/responsive.css';
@@ -47,6 +48,7 @@ const lazyAdminVerifications = () => import("./pages/Admin/AdminVerificationsPag
 const lazyAdminListingReviews = () => import("./pages/Admin/AdminListingReviewsPage");
 const lazyAdminGovStations = () => import("./pages/Admin/AdminGovernmentStationsPage");
 const lazyReferralAdmin = () => import("./pages/admin/ReferralAdmin");
+const lazyAdminHeatmap = () => import("./pages/admin/DemandHeatmap");
 const lazyLoyalty = () => import("./pages/Loyalty");
 
 const queryClient = new QueryClient();
@@ -161,6 +163,7 @@ function AppContent() {
           <Route path="verifications" element={<LazyPage load={lazyAdminVerifications} />} />
           <Route path="listing-reviews" element={<LazyPage load={lazyAdminListingReviews} />} />
           <Route path="referrals" element={<LazyPage load={lazyReferralAdmin} />} />
+          <Route path="heatmap" element={<LazyPage load={lazyAdminHeatmap} />} />
           <Route path="settings" element={<LazyPage load={lazyAdminDashboard} />} />
         </Route>
 
@@ -177,8 +180,13 @@ function AppContent() {
   );
 }
 
+// Apply the persisted theme on boot (the inline script in index.html already
+// added the class before first paint — this just re-syncs after hydration).
+applyStoredTheme();
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
+    <ThemeProvider>
     <LanguageProvider>
     <AuthProvider>
       <TooltipProvider>
@@ -193,6 +201,7 @@ const App = () => (
       </TooltipProvider>
     </AuthProvider>
     </LanguageProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 

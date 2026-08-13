@@ -22,7 +22,8 @@ import {
   Wallet,
   ShieldCheck,
   ClipboardList,
-  Ticket
+  Ticket,
+  Activity
 } from 'lucide-react';
 import { useAuth } from '@/components/Auth/AuthProvider';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -101,6 +102,12 @@ const adminNavigation = [
     href: '/admin/settings',
     icon: Settings,
     description: 'Configure system settings'
+  },
+  {
+    title: 'Demand Heatmap',
+    href: '/admin/heatmap',
+    icon: Activity,
+    description: 'Demand vs supply insights per city'
   },
 ];
 

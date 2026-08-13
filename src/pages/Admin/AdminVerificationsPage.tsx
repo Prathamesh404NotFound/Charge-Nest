@@ -50,6 +50,10 @@ export default function AdminVerificationsPage() {
   const [filter, setFilter] = useState<Filter>("all");
   const [deciding, setDeciding] = useState<string | null>(null);
   const [note, setNote] = useState("");
+  // Bulk actions (Round 15): multi-select across the current filter
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkNote, setBulkNote] = useState("");
+  const [bulkDeciding, setBulkDeciding] = useState(false);
 
   async function load() {
     try {
@@ -85,11 +89,44 @@ export default function AdminVerificationsPage() {
     }
   }
 
+  /** Bulk decision: runs decisions sequentially (RTDB has no transaction
+   *  batch for multiple paths), with per-item error isolation. */
+  async function bulkDecide(decision: "verified" | "rejected") {
+    const ids = [...selected].filter((id) => cases.some((c) => c.id === id));
+    if (ids.length === 0) return;
+    if (decision === "rejected" && !bulkNote.trim()) {
+      toast.warning("Add one shared rejection note so every host sees what to fix");
+      return;
+    }
+    setBulkDeciding(true);
+    let ok = 0;
+    let fail = 0;
+    for (const id of ids) {
+      try {
+        await decideVerificationCase(id, decision, bulkNote.trim() || undefined);
+        ok++;
+      } catch {
+        fail++;
+      }
+    }
+    setBulkNote("");
+    setSelected(new Set());
+    if (ok) toast.success(`${ok} case${ok > 1 ? "s" : ""} ${decision === "verified" ? "verified" : "rejected"}${fail ? ` · ${fail} failed` : ""}`);
+    if (fail) toast.error(`${fail} case${fail > 1 ? "s" : ""} could not be updated`);
+    setBulkDeciding(false);
+    await load();
+  }
+
   const filtered = cases.filter((c) =>
     filter === "all" ? true : filter === "pending" ? !["verified", "rejected"].includes(c.status) : ["verified", "rejected"].includes(c.status)
   );
 
   const pendingCount = cases.filter((c) => !["verified", "rejected"].includes(c.status)).length;
+
+  const selectable = filtered.filter((c) => !["verified", "rejected"].includes(c.status));
+  const selectableIds = selectable.map((c) => c.id);
+  const allSelected = selectable.length > 0 && selectableIds.every((id) => selected.has(id));
+  const selectedIds = [...selected].filter((id) => selectableIds.includes(id));
 
   return (
     <AdminRoute>
@@ -123,6 +160,57 @@ export default function AdminVerificationsPage() {
           ))}
         </div>
 
+        {/* Bulk actions toolbar */}
+        {selectable.length > 0 && (
+          <Card className="border-primary/30 bg-primary/5">
+            <CardContent className="py-3 flex flex-wrap items-center gap-3">
+              <label className="inline-flex items-center gap-2 text-sm font-medium cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={(e) =>
+                    setSelected(e.target.checked ? new Set(selectableIds) : new Set())
+                  }
+                  className="w-4 h-4 rounded border-border accent-primary"
+                />
+                Select {allSelected ? "all" : `none`} ({selectable.length} pending)
+              </label>
+              <div className="ml-auto flex flex-wrap items-center gap-2">
+                {selectedIds.length > 0 ? (
+                  <>
+                    <Textarea
+                      placeholder="Shared note (e.g. rejection reason)"
+                      value={bulkNote}
+                      onChange={(e) => setBulkNote(e.target.value)}
+                      rows={1}
+                      className="min-h-8 text-xs w-56"
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={bulkDeciding}
+                      className="border-rose-200 text-rose-600 hover:bg-rose-50"
+                      onClick={() => bulkDecide("rejected")}
+                    >
+                      <ShieldX className="w-3.5 h-3.5 mr-1" /> Reject {selectedIds.length}
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={bulkDeciding}
+                      className="bg-emerald-600 text-white hover:bg-emerald-700"
+                      onClick={() => bulkDecide("verified")}
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5 mr-1" /> Approve {selectedIds.length}
+                    </Button>
+                  </>
+                ) : (
+                  <span className="text-xs text-muted-foreground">Select cases, then approve or reject in bulk</span>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {loading ? (
           <Card>
             <CardContent className="py-10 text-center text-muted-foreground">Loading queue…</CardContent>
@@ -140,16 +228,28 @@ export default function AdminVerificationsPage() {
           </Card>
         ) : (
           <div className="grid gap-4 lg:grid-cols-2">
-            {filtered.map((c) => (
-              <VerificationCard
-                key={c.id}
-                c={c}
-                deciding={deciding === c.id}
-                onDecide={decide}
-                note={note}
-                setNote={setNote}
-              />
-            ))}
+            {filtered.map((c) => {
+              const isSelectable = !["verified", "rejected"].includes(c.status);
+              return (
+                <VerificationCard
+                  key={c.id}
+                  c={c}
+                  deciding={deciding === c.id}
+                  onDecide={decide}
+                  note={note}
+                  setNote={setNote}
+                  selectable={isSelectable}
+                  isSelected={selected.has(c.id)}
+                  onToggle={() =>
+                    setSelected((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(c.id)) next.delete(c.id); else next.add(c.id);
+                      return next;
+                    })
+                  }
+                />
+              );
+            })}
           </div>
         )}
       </div>
@@ -163,12 +263,18 @@ function VerificationCard({
   onDecide,
   note,
   setNote,
+  selectable = false,
+  isSelected = false,
+  onToggle,
 }: {
   c: HostVerificationCase;
   deciding: boolean;
   onDecide: (id: string, decision: "verified" | "rejected") => void;
   note: string;
   setNote: (v: string) => void;
+  selectable?: boolean;
+  isSelected?: boolean;
+  onToggle?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const meta = STATUS_META[c.status] || STATUS_META.new;
@@ -179,12 +285,25 @@ function VerificationCard({
       <Card className="transition-shadow hover:shadow-md">
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-2">
-            <div>
+            <div className="flex items-start gap-2.5">
+              {selectable && (
+                <label className="mt-0.5 cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => onToggle?.()}
+                    aria-label={`Select ${c.userName || "case"} for bulk action`}
+                    className="w-4 h-4 rounded border-border accent-primary"
+                  />
+                </label>
+              )}
+              <div>
               <CardTitle className="text-base">{c.userName || "Unknown Host"}</CardTitle>
               <CardDescription className="space-y-0.5">
                 <p>{c.userEmail || "no email"}</p>
                 <p className="text-xs">{c.userPhone || "no phone"}</p>
               </CardDescription>
+              </div>
             </div>
             <Badge className={meta.tone}>{meta.label}</Badge>
           </div>

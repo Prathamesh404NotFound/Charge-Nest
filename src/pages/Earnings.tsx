@@ -15,6 +15,8 @@ import {
   setHostAvailability, getHostPayoutRequests, requestPayout,
   HostSpot, HostBookingRequest, AvailabilitySlot, PayoutRequest,
 } from "@/lib/hostDashboardService";
+import { exportHostEarningsCsv } from "@/lib/earningsExportService";
+import { ArrowDownToLine } from "lucide-react";
 import HostChatInbox from "@/components/HostChatInbox";
 import { toast } from "sonner";
 import GoogleLoginModal from "@/components/Auth/GoogleLoginModal";
@@ -43,6 +45,7 @@ export default function Earnings() {
   const [hostLoading, setHostLoading] = useState(false);
   const [responding, setResponding] = useState<string | null>(null);
   const [requestingPayout, setRequestingPayout] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     if (!user || !isHost) return;
@@ -175,6 +178,29 @@ export default function Earnings() {
           <div>
             <h1 className="font-display font-bold text-3xl text-foreground">My Earnings</h1>
             <p className="text-muted-foreground text-sm">Revenue from your charging spots</p>
+          </div>
+          <div className="ml-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={exporting}
+              onClick={() => {
+                setExporting(true);
+                exportHostEarningsCsv(user.id)
+                  .then((stats) =>
+                    toast.success(
+                      stats.sessions > 0
+                        ? `Exported ${stats.sessions} sessions (₹${stats.gross.toLocaleString("en-IN")}) — file downloaded`
+                        : "Nothing to export yet — completed sessions will appear here"
+                    )
+                  )
+                  .catch(() => toast.error("Could not export earnings"))
+                  .finally(() => setExporting(false));
+              }}
+            >
+              {exporting ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <ArrowDownToLine className="w-4 h-4 mr-1.5" />}
+              Export CSV
+            </Button>
           </div>
         </div>
 

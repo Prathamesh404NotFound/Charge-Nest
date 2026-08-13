@@ -221,7 +221,6 @@ export async function updateRegistrationStatus(
           state: registration.state,
           pincode: registration.pincode,
           coordinates: registration.coordinates || null,
-          category: "home",
           outletType: registration.outletType,
           chargingSpeed: registration.chargingSpeed,
           availableHours: registration.availableHours,
