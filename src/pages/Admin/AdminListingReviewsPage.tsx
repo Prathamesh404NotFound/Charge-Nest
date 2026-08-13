@@ -159,25 +159,25 @@ export default function AdminListingReviewsPage() {
       <div className="space-y-6">
         {/* Queue stats strip */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <div className="flex items-center gap-2 text-sm text-slate-500">
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Clock3 className="h-4 w-4 text-amber-500" /> Pending
             </div>
-            <div className="mt-1 text-2xl font-bold text-slate-900">{counts.pending}</div>
+            <div className="mt-1 text-2xl font-bold text-foreground">{counts.pending}</div>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <div className="flex items-center gap-2 text-sm text-slate-500">
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Approved
             </div>
-            <div className="mt-1 text-2xl font-bold text-slate-900">{counts.approved}</div>
+            <div className="mt-1 text-2xl font-bold text-foreground">{counts.approved}</div>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <div className="flex items-center gap-2 text-sm text-slate-500">
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <XCircle className="h-4 w-4 text-rose-500" /> Rejected
             </div>
-            <div className="mt-1 text-2xl font-bold text-slate-900">{counts.rejected}</div>
+            <div className="mt-1 text-2xl font-bold text-foreground">{counts.rejected}</div>
           </div>
-          <div className="flex items-center justify-end rounded-lg border border-slate-200 bg-white p-4">
+          <div className="flex items-center justify-end rounded-lg border border-border bg-card p-4">
             <Button
               variant="outline"
               size="sm"
@@ -192,20 +192,20 @@ export default function AdminListingReviewsPage() {
 
         {/* Per-city breakdown */}
         {cityStats.length > 0 && (
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <h3 className="mb-3 text-sm font-semibold text-slate-700">By city</h3>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <h3 className="mb-3 text-sm font-semibold text-foreground">By city</h3>
             <div className="flex flex-wrap gap-2">
               {cityStats.map(c => (
                 <div
                   key={c.city}
-                  className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs"
+                  className="flex items-center gap-2 rounded-full border border-border bg-muted px-3 py-1.5 text-xs"
                 >
-                  <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                  <span className="font-medium text-slate-700">{c.city}</span>
+                  <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="font-medium text-foreground">{c.city}</span>
                   <Badge variant="secondary" className="gap-1 rounded-full bg-amber-100 px-2 text-amber-700 hover:bg-amber-100">
                     {c.pending} pending
                   </Badge>
-                  <span className="text-slate-400">
+                  <span className="text-muted-foreground">
                     {c.approved} approved · {c.rejected} rejected
                   </span>
                 </div>
@@ -230,7 +230,7 @@ export default function AdminListingReviewsPage() {
               className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                 filter === key
                   ? "border-emerald-600 bg-emerald-600 text-white"
-                  : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                  : "border-border bg-background text-muted-foreground hover:border-slate-400 hover:text-foreground"
               }`}
             >
               {label} ({count})
@@ -281,7 +281,7 @@ export default function AdminListingReviewsPage() {
                   </Button>
                 </>
               ) : (
-                <span className="text-xs text-slate-500">Select pending listings to approve or reject in bulk</span>
+                <span className="text-xs text-muted-foreground">Select pending listings to approve or reject in bulk</span>
               )}
             </div>
           </div>
@@ -289,13 +289,13 @@ export default function AdminListingReviewsPage() {
 
         {/* Review queue */}
         {loading ? (
-          <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+          <div className="rounded-lg border border-border bg-card p-8 text-center text-sm text-muted-foreground">
             Loading listing reviews…
           </div>
         ) : filtered.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-slate-300 bg-white p-10 text-center">
-            <ShieldCheck className="mx-auto mb-2 h-8 w-8 text-slate-300" />
-            <p className="text-sm text-slate-500">
+          <div className="rounded-lg border border-dashed border-border bg-card p-10 text-center">
+            <ShieldCheck className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
+            <p className="text-sm text-muted-foreground">
               {filter === "pending_review"
                 ? "No new listings waiting for review. New host submissions will appear here."
                 : "Nothing in this category yet."}
@@ -306,7 +306,7 @@ export default function AdminListingReviewsPage() {
             {filtered.map(r => {
               const isSelectable = r.status === "pending_review";
               return (
-              <div key={r.spotId} className="flex flex-col rounded-lg border border-slate-200 bg-white p-4">
+              <div key={r.spotId} className="flex flex-col rounded-lg border border-border bg-card p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-start gap-2.5">
                     {isSelectable && (
@@ -322,13 +322,13 @@ export default function AdminListingReviewsPage() {
                             })
                           }
                           aria-label={`Select ${r.name} for bulk action`}
-                          className="w-4 h-4 rounded border-slate-300 accent-emerald-600"
+                          className="w-4 h-4 rounded border-input accent-emerald-600"
                         />
                       </label>
                     )}
                     <div>
-                    <h4 className="font-semibold text-slate-900">{r.name}</h4>
-                    <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-500">
+                    <h4 className="font-semibold text-foreground">{r.name}</h4>
+                    <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
                       <MapPin className="h-3 w-3" /> {r.address}, {r.city}
                     </p>
                     </div>
@@ -345,15 +345,15 @@ export default function AdminListingReviewsPage() {
                     {r.status === "pending_review" ? "Pending review" : r.status === "approved" ? "Approved" : "Rejected"}
                   </Badge>
                 </div>
-                <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs text-slate-600">
-                  <div><dt className="text-slate-400">Host</dt><dd className="font-medium text-slate-700">{r.hostName || "—"}</dd></div>
-                  <div><dt className="text-slate-400">Phone</dt><dd className="font-medium text-slate-700">{r.hostPhone || "—"}</dd></div>
-                  <div><dt className="text-slate-400">Outlet</dt><dd className="font-medium text-slate-700">{r.outletType || "—"}</dd></div>
+                <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
+                  <div><dt className="text-muted-foreground/70">Host</dt><dd className="font-medium text-foreground">{r.hostName || "—"}</dd></div>
+                  <div><dt className="text-muted-foreground/70">Phone</dt><dd className="font-medium text-foreground">{r.hostPhone || "—"}</dd></div>
+                  <div><dt className="text-muted-foreground/70">Outlet</dt><dd className="font-medium text-foreground">{r.outletType || "—"}</dd></div>
                   {Array.isArray(r.facilities) && r.facilities.length > 0 && (
                     <div className="col-span-2"><dt className="text-slate-400">Facilities</dt><dd><FacilitiesChips amenities={(r.facilities as string[]).map((id) => ({ id, name: id.replace(/_/g, " ") }))} /></dd></div>
                   )}
-                  <div><dt className="text-slate-400">Price</dt><dd className="font-medium text-slate-700">₹{r.pricePerHour}/hr</dd></div>
-                  <div className="col-span-2"><dt className="text-slate-400">Verified host</dt><dd className="font-medium text-slate-700">{r.isVerifiedHost ? "Yes" : "No — identity check first"}</dd></div>
+                  <div><dt className="text-muted-foreground/70">Price</dt><dd className="font-medium text-foreground">₹{r.pricePerHour}/hr</dd></div>
+                  <div className="col-span-2"><dt className="text-muted-foreground/70">Verified host</dt><dd className="font-medium text-foreground">{r.isVerifiedHost ? "Yes" : "No — identity check first"}</dd></div>
                 </dl>
                 <div className="mt-3 flex items-center justify-between gap-2">
                   <span className="text-xs text-slate-400">

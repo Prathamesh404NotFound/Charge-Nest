@@ -182,7 +182,7 @@ const AdminSpotsPage: React.FC = () => {
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
       case 'inactive':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-muted text-muted-foreground';
       case 'suspended':
         return 'bg-red-100 text-red-800';
       default:
@@ -263,7 +263,7 @@ const AdminSpotsPage: React.FC = () => {
           { label: 'Active', count: spots.filter(s => s.status === 'active').length, accent: 'bg-green-50 text-green-700' },
           { label: 'Pending', count: spots.filter(s => s.status === 'pending').length, accent: 'bg-yellow-50 text-yellow-700' },
           { label: 'Verified', count: spots.filter(s => s.isVerified).length, accent: 'bg-primary/10 text-primary' },
-          { label: 'Total', count: spots.length, accent: 'bg-gray-50 text-gray-700' },
+          { label: 'Total', count: spots.length, accent: 'bg-muted text-muted-foreground' },
         ].map(({ label, count, accent }) => (
           <div key={label} className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3">
             <span className="text-sm font-medium text-muted-foreground">{label}</span>

@@ -13,10 +13,13 @@ import {
   Briefcase,
   Building2,
   Pencil,
+  Flag,
 } from "lucide-react";
 import { toast } from "sonner";
 import { LazyPage } from "@/components/LazyPage";
+import SEO from "@/components/SEO";
 import { getHostProfile, aggregateHostRating, type HostProfileSpot } from "@/lib/hostProfileService";
+import { submitFlag, REASON_OPTIONS } from "@/lib/moderationService";
 import SpotCard from "@/components/SpotCard";
 import SpotEditor from "@/components/SpotEditor";
 import { cn } from "@/lib/utils";
@@ -44,8 +47,22 @@ function HostProfileInner() {
   const [profile, setProfile] = useState<Awaited<ReturnType<typeof getHostProfile>> | null>(null);
   const [loading, setLoading] = useState(true);
   const [editingSpot, setEditingSpot] = useState<HostProfileSpot | null>(null);
+  const [reportingHost, setReportingHost] = useState(false);
 
   const isOwner = Boolean(user && user.id === hostId);
+
+  async function handleReportHost(reason: string) {
+    if (!user) return;
+    const result = await submitFlag({
+      targetType: "user",
+      targetId: hostId,
+      reason,
+      reporterId: user.id,
+      reporterName: (user as { displayName?: string }).displayName || "VoltSetu rider",
+    });
+    setReportingHost(false);
+    toast[result.ok ? "success" : "error"](result.message);
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -93,6 +110,22 @@ function HostProfileInner() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
+      {profile && (
+        <SEO
+          title={`${profile.displayName} — EV Charging Host${profile.city ? ` in ${profile.city}` : ""} | VoltSetu`}
+          description={`Browse ${profile.activeSpotCount} verified charging spot${profile.activeSpotCount === 1 ? "" : "s"} by ${profile.displayName}${profile.city ? ` in ${profile.city}` : ""}. See pricing, reviews, and book a session instantly with VoltSetu.`}
+          canonical={`/host/${hostId}`}
+          schema={{
+            "@context": "https://schema.org",
+            "@type": "Person",
+            name: profile.displayName,
+            url: `https://volt-setu.vercel.app/host/${hostId}`,
+            jobTitle: "EV Charging Spot Host",
+            description: `${profile.activeSpotCount} EV charging spot${profile.activeSpotCount === 1 ? "" : "s"} listed${profile.city ? ` in ${profile.city}` : ""}`,
+            knowsAbout: ["EV two-wheeler charging", "home charging points"],
+          }}
+        />
+      )}
       {/* Profile header */}
       <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         <div className="gradient-primary h-24 relative">
@@ -126,7 +159,38 @@ function HostProfileInner() {
                     You
                   </span>
                 )}
+                {user && !isOwner && (
+                  <button
+                    type="button"
+                    onClick={() => setReportingHost((v) => !v)}
+                    className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-0.5 text-xs font-medium text-muted-foreground transition-colors hover:border-destructive/40 hover:text-destructive"
+                    aria-label="Report this host"
+                  >
+                    <Flag className="h-3 w-3" /> Report host
+                  </button>
+                )}
               </div>
+              {reportingHost && (
+                <div className="mt-3 flex flex-wrap gap-1.5 rounded-lg border border-border bg-muted/40 p-2">
+                  {REASON_OPTIONS.map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => handleReportHost(r)}
+                      className="rounded-md bg-background px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                    >
+                      {r}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setReportingHost(false)}
+                    className="rounded-md px-2.5 py-1 text-[11px] font-medium text-muted-foreground underline-offset-2 hover:underline"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
               <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
                 {profile.city && (
                   <span className="inline-flex items-center gap-1">

@@ -1,9 +1,14 @@
 import { useEffect, useState } from "react";
-import { Lock, MessageSquare, Sparkles } from "lucide-react";
+import { Lock, MessageSquare, Sparkles, Flag } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/Auth/AuthProvider";
 import { StarRating } from "@/components/StarRating";
-import { aggregateRating, getSpotReviews, submitSpotReview } from "@/lib/reviewsService";
+import {
+  aggregateRating,
+  getSpotReviews,
+  submitSpotReview,
+} from "@/lib/reviewsService";
+import { submitFlag, REASON_OPTIONS } from "@/lib/moderationService";
 import type { Review } from "@/types";
 
 interface ReviewsSectionProps {
@@ -48,6 +53,21 @@ export function ReviewsSection({ spotId, spotRating = 0, hostId }: ReviewsSectio
 
   const { rating: avg, count } = aggregateRating(reviews, spotRating);
   const ownsSpot = Boolean(user && hostId === user.id);
+  const [flaggingReviewId, setFlaggingReviewId] = useState<string | null>(null);
+
+  async function handleFlagReview(review: Review, reason: string) {
+    if (!user) return;
+    const result = await submitFlag({
+      targetType: "review",
+      targetId: `${spotId}:${review.id}`,
+      targetOwnerId: hostId ?? "",
+      reason,
+      reporterId: user.id,
+      reporterName: (user as { displayName?: string }).displayName || "VoltSetu rider",
+    });
+    setFlaggingReviewId(null);
+    toast[result.ok ? "success" : "error"](result.message);
+  }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -175,6 +195,40 @@ export function ReviewsSection({ spotId, spotRating = 0, hostId }: ReviewsSectio
                   <span className="font-semibold text-foreground">Host reply: </span>
                   {review.response}
                 </p>
+              )}
+              {user && review.userId !== user.id && !ownsSpot && (
+                <div className="mt-2">
+                  {flaggingReviewId === review.id ? (
+                    <div className="flex flex-wrap gap-1.5 rounded-lg border border-border bg-background p-2">
+                      {REASON_OPTIONS.map((r) => (
+                        <button
+                          key={r}
+                          type="button"
+                          onClick={() => handleFlagReview(review, r)}
+                          className="rounded-md bg-muted px-2 py-1 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                        >
+                          {r}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setFlaggingReviewId(null)}
+                        className="rounded-md px-2 py-1 text-[10px] font-medium text-muted-foreground underline-offset-2 hover:underline"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setFlaggingReviewId(review.id)}
+                      className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground transition-colors hover:text-destructive"
+                      aria-label="Report this review"
+                    >
+                      <Flag className="h-3 w-3" /> Report
+                    </button>
+                  )}
+                </div>
               )}
             </article>
           ))}

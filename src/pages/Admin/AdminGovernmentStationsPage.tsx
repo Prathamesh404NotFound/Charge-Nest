@@ -223,11 +223,11 @@ const AdminGovernmentStationsPage: React.FC = () => {
       case 'maintenance':
         return 'bg-yellow-100 text-yellow-800';
       case 'inactive':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-muted text-muted-foreground';
       case 'coming_soon':
         return 'bg-blue-100 text-blue-800';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-muted text-muted-foreground';
     }
   };
 
@@ -240,7 +240,7 @@ const AdminGovernmentStationsPage: React.FC = () => {
       case 'rejected':
         return 'bg-red-100 text-red-800';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-muted text-muted-foreground';
     }
   };
 
@@ -818,8 +818,8 @@ const AdminGovernmentStationsPage: React.FC = () => {
           </DialogHeader>
           <div className="space-y-6">
             {/* File Upload */}
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-              <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+              <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <div className="space-y-2">
                 <div className="text-lg font-medium">Choose a file to import</div>
                 <div className="text-sm text-muted-foreground">

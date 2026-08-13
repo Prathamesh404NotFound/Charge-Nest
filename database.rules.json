@@ -179,6 +179,14 @@
           ".validate": "newData.hasChildren(['hostId', 'rating', 'ratedAt']) && newData.child('rating').val() >= 1 && newData.child('rating').val() <= 5 && newData.child('hostId').val() === auth.uid"
         }
       }
+    },
+    "contentFlags": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
+      "$flagId": {
+        ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
+        ".write": "auth != null && ((!data.exists() && newData.child('reporterId').val() === auth.uid && newData.hasChildren(['targetType', 'targetId', 'reason', 'reporterId', 'reporterName', 'status', 'createdAt']) && newData.child('status').val() === 'open' && (newData.child('targetType').val() === 'review' || newData.child('targetType').val() === 'user')) || (data.exists() && data.child('status').val() === 'open' && root.child('admins').child(auth.uid).exists() && newData.child('status').val() === 'resolved'))",
+        ".validate": "newData.hasChildren(['targetType', 'targetId', 'reason', 'reporterId', 'status']) && newData.child('reason').val().length() <= 300"
+      }
     }
   }
 }

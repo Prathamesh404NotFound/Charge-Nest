@@ -23,7 +23,8 @@ import {
   ShieldCheck,
   ClipboardList,
   Ticket,
-  Activity
+  Activity,
+  Flag
 } from 'lucide-react';
 import { useAuth } from '@/components/Auth/AuthProvider';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -108,6 +109,12 @@ const adminNavigation = [
     href: '/admin/heatmap',
     icon: Activity,
     description: 'Demand vs supply insights per city'
+  },
+  {
+    title: 'Moderation',
+    href: '/admin/moderation',
+    icon: Flag,
+    description: 'Review reports, mute users, remove content'
   },
 ];
 

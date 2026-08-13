@@ -49,6 +49,7 @@ const lazyAdminListingReviews = () => import("./pages/Admin/AdminListingReviewsP
 const lazyAdminGovStations = () => import("./pages/Admin/AdminGovernmentStationsPage");
 const lazyReferralAdmin = () => import("./pages/admin/ReferralAdmin");
 const lazyAdminHeatmap = () => import("./pages/admin/DemandHeatmap");
+const lazyAdminModeration = () => import("./pages/admin/AdminModerationPage");
 const lazyLoyalty = () => import("./pages/Loyalty");
 const lazyHostProfile = () => import("./pages/HostProfile");
 
@@ -169,6 +170,7 @@ function AppContent() {
           <Route path="verifications" element={<LazyPage load={lazyAdminVerifications} />} />
           <Route path="listing-reviews" element={<LazyPage load={lazyAdminListingReviews} />} />
           <Route path="referrals" element={<LazyPage load={lazyReferralAdmin} />} />
+          <Route path="moderation" element={<LazyPage load={lazyAdminModeration} />} />
           <Route path="heatmap" element={<LazyPage load={lazyAdminHeatmap} />} />
           <Route path="settings" element={<LazyPage load={lazyAdminDashboard} />} />
         </Route>

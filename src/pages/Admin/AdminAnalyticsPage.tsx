@@ -430,7 +430,7 @@ const AdminAnalyticsPage: React.FC = () => {
                 { label: 'Pending', value: data.funnel.pending, cls: 'text-yellow-600 bg-yellow-50' },
                 { label: 'Approved', value: data.funnel.approved, cls: 'text-blue-600 bg-blue-50' },
                 { label: 'Completed', value: data.funnel.completed, cls: 'text-green-600 bg-green-50' },
-                { label: 'Cancelled', value: data.funnel.cancelled, cls: 'text-gray-600 bg-gray-50' },
+                { label: 'Cancelled', value: data.funnel.cancelled, cls: 'text-muted-foreground bg-muted' },
                 { label: 'Rejected', value: data.funnel.rejected, cls: 'text-red-600 bg-red-50' }
               ].map((step) => (
                 <div key={step.label} className={`rounded-lg p-4 text-center ${step.cls}`}>

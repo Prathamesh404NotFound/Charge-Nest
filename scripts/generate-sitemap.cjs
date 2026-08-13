@@ -9,6 +9,7 @@ const path = require('path');
 
 const BASE_URL = 'https://voltsetu.netlify.app';
 const FIREBASE_DB_URL = 'https://charge-nest-default-rtdb.asia-southeast1.firebasedatabase.app/chargingSpots.json';
+const FIREBASE_USERS_URL = 'https://charge-nest-default-rtdb.asia-southeast1.firebasedatabase.app/users.json';
 
 // cities.json is a tiny static snapshot (slug + active) kept in sync by the
 // `npm run sync-cities` script whenever src/lib/cities.ts changes. It exists
@@ -67,6 +68,27 @@ async function fetchDynamicSpots() {
     .filter((spot) => spot.status === 'active' || spot.status === 'approved');
 }
 
+// Emit /host/:id pages only for users who actually own at least one charging
+// spot — this keeps the sitemap free of 404 host URLs. Network failures
+// degrade gracefully the same way spot fetching does.
+async function fetchHostProfileIds() {
+  const [users, spots] = await Promise.all([
+    fetchJson(FIREBASE_USERS_URL, 8000),
+    fetchJson(FIREBASE_DB_URL, 8000),
+  ]);
+  if (!spots) return [];
+  const spotOwners = new Set(
+    Object.values(spots).map((s) => s && s.hostId).filter((id) => Boolean(id))
+  );
+  if (!users) return Array.from(spotOwners);
+  return Object.keys(users).filter((id) => {
+    const user = users[id] || {};
+    if (!spotOwners.has(id)) return false;
+    const role = String(user.role || '').toLowerCase();
+    return role === 'host' || role === 'admin' || user.isVerified === true;
+  });
+}
+
 function formatDate(timestamp) {
   if (!timestamp) return new Date().toISOString().split('T')[0];
   return new Date(timestamp).toISOString().split('T')[0];
@@ -75,8 +97,8 @@ function formatDate(timestamp) {
 async function generate() {
   console.log('Generating sitemap...');
 
-  const spots = await fetchDynamicSpots();
-  console.log(`Fetched ${spots.length} live spots.`);
+  const [spots, hostIds] = await Promise.all([fetchDynamicSpots(), fetchHostProfileIds()]);
+  console.log(`Fetched ${spots.length} live spots and ${hostIds.length} host profiles.`);
 
   let sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -97,6 +119,15 @@ async function generate() {
     <lastmod>${formatDate()}</lastmod>
     <changefreq>${page.changefreq}</changefreq>
     <priority>${page.priority}</priority>
+  </url>\n`;
+  });
+
+  hostIds.forEach((id) => {
+    sitemap += `  <url>
+    <loc>${BASE_URL}/host/${id}</loc>
+    <lastmod>${formatDate()}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
   </url>\n`;
   });
 
