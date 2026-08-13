@@ -1,20 +1,23 @@
-/* VoltSetu booking reminders (Round 14).
+/* VoltSetu booking reminders (Round 14, hardened Round 20).
  *
  * Client-side session reminders: riders schedule a local notification
  * (via the Web Notification API, PWA-friendly) ahead of a booked session.
  *
- * - No backend writes — reminders are in-memory + the Notification API
- *   handles delivery. Works offline and in installed PWA/capacitor app.
+ * - No backend writes — reminders live in localStorage, so they survive
+ *   page reloads, app restarts, and tab closes (unlike pure in-memory timers).
+ * - Works offline and in installed PWA/Capacitor app.
  * - Reminders are keyed by booking id, so the same booking can't be
  *   double-scheduled.
- * - Uses setTimeout so it auto-clears when the page reloads; to keep the
- *   reminder robust the page schedules it on mount from localStorage.
+ * - Round 20: a periodic "self-heal tick" (every 60s) re-scans stored
+ *   reminders and re-arms any that got lost (e.g. app killed before the
+ *   timer fired). This is what makes reminders fire even after a restart.
  *
  * Persistence contract (localStorage, client only):
  *   voltsetu:reminders -> { [bookingId]: { id, spotName, scheduledAt, minutesBefore } }
  */
 
 const STORAGE_KEY = "voltsetu:reminders";
+const TICK_MS = 60 * 1000;
 
 export interface BookingReminder {
   id: string;
@@ -52,11 +55,12 @@ let armedTimers = new Map<string, number>();
 /** Arm (or re-arm) all stored reminders after page load. */
 export function armAllReminders(): void {
   clearAllArmed();
-  const reminders = loadStored();
-  reminders.forEach((r) => armReminder(r));
+  loadStored().forEach((r) => armReminder(r));
+  startHealTick();
 }
 
 function armReminder(r: BookingReminder): void {
+  if (armedTimers.has(r.bookingId)) return; // already armed
   const when = r.scheduledAt - r.minutesBefore * 60 * 1000;
   const delay = when - Date.now();
   if (delay <= 0) {
@@ -65,6 +69,22 @@ function armReminder(r: BookingReminder): void {
   }
   const timer = window.setTimeout(() => fireNotification(r), delay);
   armedTimers.set(r.bookingId, timer);
+}
+
+/** Round 20: periodic self-heal tick — re-arms reminders lost after app restarts. */
+let healInterval: ReturnType<typeof setInterval> | null = null;
+
+function startHealTick(): void {
+  if (healInterval) return;
+  healInterval = window.setInterval(() => {
+    if (armedTimers.size === 0 && loadStored().length > 0) {
+      armAllReminders(); // app restarted after storage survived — re-arm everything
+    }
+    // Also ensure every fresh reminder in storage has a live timer.
+    loadStored().forEach((r) => {
+      if (!armedTimers.has(r.bookingId)) armReminder(r);
+    });
+  }, TICK_MS);
 }
 
 async function fireNotification(r: BookingReminder): void {

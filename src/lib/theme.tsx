@@ -77,3 +77,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 }
 
 export const useTheme = () => useContext(ThemeContext);
+
+// Round 19: imperative dark-mode check for styling helpers (no hook needed).
+export function isDark(): boolean {
+  return effectiveDark(
+    (typeof localStorage !== "undefined" && (localStorage.getItem(STORAGE_KEY) as ThemeMode | null)) || "system"
+  );
+}

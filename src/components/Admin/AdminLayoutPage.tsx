@@ -116,7 +116,16 @@ const adminNavigation = [
     icon: Flag,
     description: 'Review reports, mute users, remove content'
   },
+  {
+    title: 'Notifications',
+    href: '/admin/notifications',
+    icon: Bell,
+    description: 'Inbox: new flags, pending reviews, verifications'
+  },
 ];
+
+/** Optional per-item unread count badge (set by consumers). */
+const navBadges: Record<string, number> = {};
 
 const AdminLayoutPage: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);

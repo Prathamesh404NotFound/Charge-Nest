@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { isDark } from "@/lib/theme";
 import { submitBookingRequest } from "@/lib/bookingService";
 import { computeDepositAmount, startDepositPayment, isPaymentsEnabled } from "@/lib/paymentsService";
 import { useNavigate } from "react-router-dom";
@@ -32,6 +33,8 @@ import { useT } from "@/lib/i18n";
 import StepIndicator from "@/components/StepIndicator";
 import { ReviewsSection } from "@/components/ReviewsSection";
 import FacilitiesChips from "@/components/FacilitiesChips";
+import { Star } from "lucide-react";
+import { getHostRatingSummary } from "@/lib/hostProfileService";
 import type { Amenity } from "@/types";
 
 /** Mobile bottom-sheet (< md / 768px). Tablet+ uses centered Dialog. */
@@ -303,6 +306,12 @@ export default function BookingModal({ isOpen, onClose, spot }: BookingModalProp
   const spotLocation = spot.address || spot.city || "Unknown area";
   const spotDistance = formatDistance(spot.distance);
   const hostFirstName = spot.hostName.trim().split(/\s+/)[0] || spot.hostName;
+  // Round 21: host reputation (from rider ratings across all their spots).
+  const [hostRating, setHostRating] = useState<{ average: number; total: number } | null>(null);
+  useEffect(() => {
+    if (!spot.hostId) return;
+    getHostRatingSummary(spot.hostId).then(setHostRating).catch(() => setHostRating(null));
+  }, [spot.hostId, isOpen]);
   const availableAmenities =
     spot.amenities?.filter((a) => a.available && a.name?.trim()) ?? [];
 
@@ -544,8 +553,8 @@ export default function BookingModal({ isOpen, onClose, spot }: BookingModalProp
           }
         >
           <div className="p-6 pt-2 md:p-0 text-center">
-            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
-              <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 ${isDark() ? "bg-[hsl(var(--ev-green))]/15" : "bg-green-100"}`}>
+              <svg className={`w-8 h-8 ${isDark() ? "text-[hsl(var(--ev-green))]" : "text-green-600"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
@@ -577,12 +586,12 @@ export default function BookingModal({ isOpen, onClose, spot }: BookingModalProp
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Est. Cost:</span>
-                <span className="font-semibold text-green-600">₹{estimatedCost}</span>
+                <span className={`font-semibold ${isDark() ? "text-[hsl(var(--ev-green))]" : "text-green-600"}`}>₹{estimatedCost}</span>
               </div>
               {depositMode && depositOrderRef && (
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Deposit paid:</span>
-                  <span className="font-semibold text-emerald-600">₹{depositAmount}</span>
+                  <span className={`font-semibold ${isDark() ? "text-[hsl(var(--ev-green))]" : "text-emerald-600"}`}>₹{depositAmount}</span>
                 </div>
               )}
 
@@ -761,6 +770,13 @@ export default function BookingModal({ isOpen, onClose, spot }: BookingModalProp
                     <BadgeCheck className="w-4 h-4 text-ev-green shrink-0" aria-label="Verified host" />
                   )}
                 </div>
+                {hostRating && hostRating.total > 0 && (
+                  <div className="flex items-center gap-1 text-sm">
+                    <Star className={`w-4 h-4 ${isDark() ? "text-[hsl(var(--warning))]" : "text-amber-500"}`} />
+                    <span className="font-semibold text-foreground">{hostRating.average.toFixed(1)}</span>
+                    <span className="text-muted-foreground">({hostRating.total} rider {hostRating.total === 1 ? "rating" : "ratings"})</span>
+                  </div>
+                )}
                 {spotDistance && (
                   <div className="flex items-center gap-1.5 text-muted-foreground">
                     <MapPin className="w-4 h-4 text-primary/70 shrink-0" />

@@ -135,3 +135,36 @@ export function aggregateHostRating(spots: HostProfileSpot[]): { average: number
   }
   return { average: weight > 0 ? Math.round((total / weight) * 10) / 10 : 0, totalReviews: weight };
 }
+
+/**
+ * Round 21: rider-facing host reputation summary.
+ * Rider ratings live at riderRatings/{spotId}/{hostId}? No — hosts rate riders
+ * at riderRatings/{spotId}/{riderId}. But hosts ALSO receive reputation via
+ * spot reviews: a host's aggregate spot-review score is already computed by
+ * aggregateHostRating. This helper returns the weighted average across the
+ * host's own spots, matching what HostProfile.tsx shows.
+ */
+export async function getHostRatingSummary(hostId: string): Promise<{ average: number; total: number } | null> {
+  try {
+    const spotsSnap = await get(ref(database, "chargingSpots"));
+    if (!spotsSnap.exists()) return { average: 0, total: 0 };
+    const all = spotsSnap.val() as Record<string, { hostId?: string; rating?: number; reviews?: number }>;
+    return aggregateHostRating(
+      Object.entries(all)
+        .filter(([, s]) => s.hostId === hostId && s.rating > 0 && s.reviews > 0)
+        .map(([id, s]) => ({
+          id,
+          name: "",
+          address: "",
+          city: "",
+          pricePerHour: 0,
+          rating: safeNum(s.rating),
+          reviews: safeNum(s.reviews),
+          isVerified: false,
+          status: "active",
+        }))
+    );
+  } catch {
+    return null;
+  }
+}

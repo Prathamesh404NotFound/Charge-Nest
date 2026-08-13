@@ -17,6 +17,8 @@ import {
 } from "@/lib/hostDashboardService";
 import { exportHostEarningsCsv } from "@/lib/earningsExportService";
 import { ArrowDownToLine } from "lucide-react";
+import { isDark } from "@/lib/theme";
+import { statusTextColor, successTextClasses, dangerOutlineClasses } from "@/lib/darkTokens";
 import HostChatInbox from "@/components/HostChatInbox";
 import { toast } from "sonner";
 import GoogleLoginModal from "@/components/Auth/GoogleLoginModal";
@@ -251,12 +253,12 @@ export default function Earnings() {
                     <CardContent className="p-4 flex flex-wrap items-center gap-4">
                       <div className="flex items-center gap-3 flex-1 min-w-56">
                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${req.emergency ? "bg-red-100 dark:bg-red-900/30" : "bg-blue-100 dark:bg-blue-900/30"}`}>
-                          {req.emergency ? <Zap className="w-5 h-5 text-red-600" /> : <Clock className="w-5 h-5 text-blue-600" />}
+                          {req.emergency ? <Zap className="w-5 h-5 text-red-500" /> : <Clock className={`w-5 h-5 ${isDark() ? "text-[hsl(var(--electric))]" : "text-blue-600"}`} />}
                         </div>
                         <div>
                           <p className="text-sm font-medium text-foreground flex items-center gap-2">
                             {req.userName || "Rider"}
-                            {req.emergency ? <span className="text-[10px] font-bold uppercase tracking-wide text-red-600 border border-red-200 rounded-full px-1.5">Rescue</span> : null}
+                            {req.emergency ? <span className={`text-[10px] font-bold uppercase tracking-wide ${isDark() ? "text-red-400 border-red-500/40" : "text-red-600 border-red-200"} rounded-full px-1.5`}>Rescue</span> : null}
                             {req.riderReputation && req.riderReputation.count > 0 ? (
                               <span className="text-[10px] font-bold uppercase tracking-wide text-ev-green border border-ev-green/40 rounded-full px-1.5">
                                 ★ {req.riderReputation.average} · {req.riderReputation.count} {req.riderReputation.count === 1 ? "review" : "reviews"}
@@ -272,7 +274,7 @@ export default function Earnings() {
                       <div className="flex items-center gap-2 flex-wrap">
                         {req.status !== "completed" && (
                           <>
-                            <Button size="sm" variant="outline" className="border-red-200 text-red-600 hover:bg-red-50"
+                            <Button size="sm" variant="outline" className={dangerOutlineClasses()}
                               disabled={responding === req.id}
                               onClick={() => { setResponding(req.id); hostRespondToRequest(req.spotId, req.id, req.userId, "rejected").then(() => { setQueue(prev => prev.filter(r => r.id !== req.id)); toast.success("Request rejected"); }).catch(() => toast.error("Could not reject")).finally(() => setResponding(null)); }}>
                               Reject
@@ -345,7 +347,7 @@ export default function Earnings() {
                                 }}
                                 className={`h-11 w-11 rounded-lg text-[11px] font-medium border transition-colors ${
                                   blocked
-                                    ? "bg-red-100 border-red-300 text-red-700 dark:bg-red-900/30 dark:border-red-800 dark:text-red-300"
+                                    ? (isDark() ? "bg-red-500/15 border-red-500/40 text-red-400" : "bg-red-100 border-red-300 text-red-700")
                                     : "bg-card border-border text-foreground hover:border-primary"
                                 }`}
                               >
@@ -374,7 +376,7 @@ export default function Earnings() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <Card><CardContent className="p-4">
                 <p className="text-xs text-muted-foreground mb-1">Total Earned</p>
-                <p className="text-2xl font-bold text-green-600">₹{summary?.totalEarned ?? 0}</p>
+                <p className={`text-2xl font-bold ${successTextClasses()}`}>₹{summary?.totalEarned ?? 0}</p>
               </CardContent></Card>
               <Card><CardContent className="p-4">
                 <p className="text-xs text-muted-foreground mb-1">Already Paid Out</p>
@@ -402,7 +404,7 @@ export default function Earnings() {
                     {payouts.map(p => (
                       <div key={p.id} className="flex items-center justify-between p-3 rounded-xl border border-border">
                         <div className="flex items-center gap-3">
-                          <span className={`w-2.5 h-2.5 rounded-full ${p.status === "paid" ? "bg-green-500" : p.status === "processing" ? "bg-blue-500" : p.status === "rejected" ? "bg-red-400" : "bg-amber-400"}`} />
+                          <span className={`w-2.5 h-2.5 rounded-full ${statusTextColor(p.status === "paid" ? "completed" : p.status === "processing" ? "processing" : p.status === "rejected" ? "rejected" : "pending").split(" ")[0].replace("text", "bg")}`} />
                           <p className="text-sm text-foreground">₹{p.amount} · {formatDate(p.createdAt)}</p>
                         </div>
                         <span className="text-xs font-medium capitalize text-muted-foreground">{p.status}</span>
@@ -418,9 +420,9 @@ export default function Earnings() {
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
-            { label: "Total Earned", value: `₹${summary?.totalEarned ?? 0}`, icon: IndianRupee, color: "text-green-600" },
-            { label: "Completed", value: summary?.completedSessions ?? 0, icon: CheckCircle2, color: "text-blue-600" },
-            { label: "Pending", value: summary?.pendingSessions ?? 0, icon: AlertCircle, color: "text-amber-600" },
+            { label: "Total Earned", value: `₹${summary?.totalEarned ?? 0}`, icon: IndianRupee, color: successTextClasses() },
+            { label: "Completed", value: summary?.completedSessions ?? 0, icon: CheckCircle2, color: isDark() ? "text-[hsl(var(--electric))]" : "text-blue-600" },
+            { label: "Pending", value: summary?.pendingSessions ?? 0, icon: AlertCircle, color: isDark() ? "text-[hsl(var(--warning))]" : "text-amber-600" },
             { label: "Avg / Session", value: `₹${summary?.averagePerSession ?? 0}`, icon: TrendingUp, color: "text-primary" },
           ].map(({ label, value, icon: Icon, color }) => (
             <Card key={label}>
@@ -455,7 +457,7 @@ export default function Earnings() {
                       <p className="text-xs text-muted-foreground">{data.sessions} sessions completed</p>
                     </div>
                   </div>
-                  <p className="font-bold text-green-600">₹{Math.round(data.earned)}</p>
+                  <p className={`font-bold ${successTextClasses()}`}>₹{Math.round(data.earned)}</p>
                 </div>
               ))}
             </CardContent>
@@ -488,7 +490,7 @@ export default function Earnings() {
                         </div>
                       </div>
                     </div>
-                    <p className={`font-bold text-sm ${entry.earned > 0 ? "text-green-600" : "text-muted-foreground"}`}>
+                    <p className={`font-bold text-sm ${entry.earned > 0 ? successTextClasses() : "text-muted-foreground"}`}>
                       {entry.earned > 0 ? `+₹${Math.round(entry.earned)}` : "—"}
                     </p>
                   </div>

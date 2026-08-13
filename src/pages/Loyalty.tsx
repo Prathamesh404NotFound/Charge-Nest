@@ -5,11 +5,14 @@
  */
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Zap, Leaf, Flame, Star, Trophy, Loader2, Award } from "lucide-react";
+import { Zap, Leaf, Flame, Star, Trophy, Loader2, Award, Share2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { isDark } from "@/lib/theme";
 import { Badge } from "@/components/ui/badge";
 import { getLoyaltyProfile, BADGES, type LoyaltyProfile } from "@/lib/loyaltyService";
 import { useAuth } from "@/components/Auth/AuthProvider";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import SEO from "@/components/SEO";
 
 const BADGE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -19,6 +22,25 @@ const BADGE_ICONS: Record<string, React.ComponentType<{ className?: string }>> =
   star: Star,
   trophy: Trophy,
 };
+
+// Round 20: shareable CO2 impact — Web Share API with WhatsApp fallback.
+async function shareImpact(co2Kg: number, level: number) {
+  const text = `I've saved ${co2Kg} kg of CO₂ charging my EV on VoltSetu — find charging spots near you at https://volt-setu.vercel.app #ElectricIndia 🌱⚡`;
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: "My VoltSetu Green Impact", text });
+      return;
+    } catch {
+      /* cancelled / unsupported */
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    toast.success("Impact message copied — paste it anywhere!");
+  } catch {
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener");
+  }
+}
 
 export default function Loyalty() {
   const { user } = useAuth();
@@ -79,7 +101,7 @@ export default function Loyalty() {
             </Card>
             <Card className="rounded-2xl">
               <CardContent className="p-5 flex flex-col gap-1">
-                <Leaf className="w-5 h-5 text-green-600 mb-1" />
+                <Leaf className={`w-5 h-5 mb-1 ${isDark() ? "text-[hsl(var(--ev-green))]" : "text-green-600"}`} />
                 <p className="text-3xl font-bold">{profile.co2Kg} kg</p>
                 <p className="text-xs text-muted-foreground">CO₂ saved vs petrol</p>
                 <p className="text-[10px] text-muted-foreground">~4 kg per completed session</p>
@@ -110,7 +132,7 @@ export default function Loyalty() {
                       key={badge.id}
                       className={`relative flex flex-col items-center text-center p-4 rounded-xl border transition-all duration-300 ${
                         earned
-                          ? "border-ev-green bg-ev-green/5 shadow-sm hover:-translate-y-0.5"
+                          ? (isDark() ? "border-[hsl(var(--ev-green))]/50 bg-[hsl(var(--ev-green))]/10 shadow-sm hover:-translate-y-0.5" : "border-ev-green bg-ev-green/5 shadow-sm hover:-translate-y-0.5")
                           : "border-border bg-muted/30 opacity-50 grayscale"
                       }`}
                     >
@@ -127,6 +149,23 @@ export default function Loyalty() {
             </CardContent>
           </Card>
 
+          {/* Round 20: shareable CO2 impact card */}
+          {profile.co2Kg > 0 && (
+            <Card className="rounded-2xl overflow-hidden">
+              <CardContent className="p-5 flex flex-col items-center text-center gap-2">
+                <div className="w-12 h-12 rounded-full gradient-green flex items-center justify-center">
+                  <Leaf className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="font-display font-bold text-lg">Your green impact</h3>
+                <p className="text-sm text-muted-foreground max-w-sm">
+                  You've saved <span className={`font-bold ${isDark() ? "text-[hsl(var(--ev-green))]" : "text-green-600"}`}>{profile.co2Kg} kg of CO₂</span> versus a petrol scooter — that's {profile.co2Kg >= 50 ? "a whole tree's worth of cleaning" : "a real dent in pollution"}.
+                </p>
+                <Button variant="outline" size="sm" className="gap-1.5 mt-1" onClick={() => shareImpact(profile.co2Kg, profile.level)}>
+                  <Share2 className="w-3.5 h-3.5" /> Share my impact
+                </Button>
+              </CardContent>
+            </Card>
+          )}
           <p className="text-center text-xs text-muted-foreground">
             Points and badges are calculated automatically from your completed sessions and host ratings.
             Charge more to level up — every 100 points = 1 level.

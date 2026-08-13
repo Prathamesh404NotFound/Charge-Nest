@@ -23,14 +23,16 @@ import {
 } from "@/lib/reminderService";
 import GoogleLoginModal from "@/components/Auth/GoogleLoginModal";
 import SEO from "@/components/SEO";
+import { isDark } from "@/lib/theme";
+import { successTextClasses, dangerOutlineClasses } from "@/lib/darkTokens";
 import type { User } from "@/types";
 
 const STATUS_CONFIG = {
-  pending:   { label: "Pending",   color: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",   icon: AlertCircle },
-  approved:  { label: "Approved",  color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",       icon: CheckCircle2 },
-  completed: { label: "Completed", color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",   icon: CheckCircle2 },
-  rejected:  { label: "Rejected",  color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",           icon: XCircle },
-  cancelled: { label: "Cancelled", color: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",          icon: XCircle },
+  pending:   { label: "Pending",   color: isDark() ? "bg-amber-500/15 text-[hsl(var(--warning))]" : "bg-amber-100 text-amber-800",   icon: AlertCircle },
+  approved:  { label: "Approved",  color: isDark() ? "bg-[hsl(var(--electric))]/15 text-[hsl(var(--electric))]" : "bg-blue-100 text-blue-800",       icon: CheckCircle2 },
+  completed: { label: "Completed", color: isDark() ? "bg-[hsl(var(--ev-green))]/15 text-[hsl(var(--ev-green))]" : "bg-green-100 text-green-800",   icon: CheckCircle2 },
+  rejected:  { label: "Rejected",  color: isDark() ? "bg-red-500/15 text-red-400" : "bg-red-100 text-red-800",           icon: XCircle },
+  cancelled: { label: "Cancelled", color: isDark() ? "bg-white/10 text-gray-300" : "bg-gray-100 text-gray-600",          icon: XCircle },
 } as const;
 
 const FILTERS = ["All", "Pending", "Approved", "Completed", "Cancelled", "Rejected"];
@@ -141,9 +143,9 @@ export default function BookingHistory() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
             { label: "Total", value: bookings.length, color: "text-foreground" },
-            { label: "Pending", value: bookings.filter(b => b.status === "pending").length, color: "text-amber-600" },
-            { label: "Completed", value: bookings.filter(b => b.status === "completed").length, color: "text-green-600" },
-            { label: "Cancelled", value: bookings.filter(b => b.status === "cancelled" || b.status === "rejected").length, color: "text-red-500" },
+            { label: "Pending", value: bookings.filter(b => b.status === "pending").length, color: isDark() ? "text-[hsl(var(--warning))]" : "text-amber-600" },
+            { label: "Completed", value: bookings.filter(b => b.status === "completed").length, color: successTextClasses() },
+            { label: "Cancelled", value: bookings.filter(b => b.status === "cancelled" || b.status === "rejected").length, color: isDark() ? "text-red-400" : "text-red-500" },
           ].map(({ label, value, color }) => (
             <Card key={label}>
               <CardContent className="p-4 text-center">
@@ -200,9 +202,9 @@ export default function BookingHistory() {
                     <div className="flex items-stretch">
                       {/* Color bar */}
                       <div className={`w-1.5 flex-shrink-0 ${
-                        booking.status === "completed" ? "bg-green-500" :
-                        booking.status === "pending" ? "bg-amber-400" :
-                        booking.status === "approved" ? "bg-blue-500" : "bg-gray-300"
+                        booking.status === "completed" ? "bg-[hsl(var(--ev-green))]" :
+                        booking.status === "pending" ? "bg-[hsl(var(--warning))]" :
+                        booking.status === "approved" ? "bg-[hsl(var(--electric))]" : "bg-muted-foreground/50"
                       }`} />
 
                       <div className="flex-1 p-4">
@@ -248,7 +250,7 @@ export default function BookingHistory() {
                         {(booking.status === "pending" || booking.status === "approved") && (
                           <div className="mt-3 flex items-center justify-end gap-2 flex-wrap">
                             {booking.status === "pending" && (
-                              <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50"
+                              <Button size="sm" variant="outline" className={dangerOutlineClasses()}
                                 onClick={() => handleCancel(booking)}
                                 disabled={cancelling === booking.id}>
                                 {cancelling === booking.id

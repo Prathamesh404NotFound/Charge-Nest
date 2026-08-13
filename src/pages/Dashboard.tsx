@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { User, MapPin, Clock, DollarSign, Zap, TrendingUp, History, Settings, Car, Heart, Copy, Pause, Play, Share2 } from "lucide-react";
+import { User, MapPin, Clock, DollarSign, Zap, TrendingUp, History, Settings, Car, Heart, Copy, Pause, Play, Share2, MessageCircle } from "lucide-react";
 import { useAuth } from "@/components/Auth/AuthProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,8 @@ import {
 } from "@/lib/availabilityService";
 import { toast } from "sonner";
 import SEO from "@/components/SEO";
+import { isDark } from "@/lib/theme";
+import { successTextClasses } from "@/lib/darkTokens";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -147,6 +149,21 @@ export default function Dashboard() {
     } catch {
       toast.error("Copy failed — long-press the code to select it");
     }
+  };
+
+  // Round 20: one-tap WhatsApp share of the referral code (Web Share API fallback to WhatsApp deep link).
+  const handleShareReferral = async () => {
+    if (!referral) return;
+    const message = `Earn money with VoltSetu! Register your home EV charging spot and get paid by nearby riders. Use my referral code ${referral.code} when signing up at https://volt-setu.vercel.app — refer a host and they earn ₹50 credit too!`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Earn with VoltSetu", text: message, url: "https://volt-setu.vercel.app" });
+        return;
+      } catch {
+        /* share cancelled or unsupported — fall through to WhatsApp */
+      }
+    }
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank", "noopener");
   };
 
   const totalSpent = bookings
@@ -277,7 +294,7 @@ export default function Dashboard() {
                   </div>
                   <div className="text-right">
                     <p className="font-medium text-sm">₹{booking.estimatedCost || Math.round((booking.pricePerHour * booking.duration) / 60)}</p>
-                    <span className={`text-[10px] uppercase font-bold tracking-wide ${booking.status === "completed" ? "text-green-600" : booking.status === "pending" || booking.status === "approved" ? "text-amber-500" : "text-muted-foreground"}`}>
+                    <span className={`text-[10px] uppercase font-bold tracking-wide ${booking.status === "completed" ? successTextClasses() : booking.status === "pending" || booking.status === "approved" ? (isDark() ? "text-[hsl(var(--warning))]" : "text-amber-600") : "text-muted-foreground"}`}>
                       {booking.status}
                     </span>
                   </div>
@@ -315,7 +332,7 @@ export default function Dashboard() {
               <CardContent className="space-y-3">
                 <Button variant="outline" className="w-full justify-start h-14 text-base gap-3" asChild>
                   <Link to="/dashboard/earnings">
-                    <DollarSign className="w-5 h-5 text-green-600" />
+                    <DollarSign className={`w-5 h-5 ${successTextClasses()}`} />
                     View Host Earnings
                   </Link>
                 </Button>
@@ -351,7 +368,7 @@ export default function Dashboard() {
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
-                             <span className={`text-[10px] font-bold uppercase ${isOccupied ? "text-amber-500" : "text-ev-green"}`}>
+                             <span className={`text-[10px] font-bold uppercase ${isOccupied ? (isDark() ? "text-[hsl(var(--warning))]" : "text-amber-600") : (isDark() ? "text-[hsl(var(--ev-green))]" : "text-ev-green")}`}>
                               {isOccupied ? "Occupied" : "Free"}
                             </span>
                             <button
@@ -373,7 +390,7 @@ export default function Dashboard() {
                             <p className="text-[10px] text-muted-foreground">Riders see a live dot on your spot</p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className={`w-2 h-2 rounded-full ${liveStatuses[spot.id] !== false ? "bg-ev-green animate-pulse" : "bg-red-500"}`} />
+                            <span className={`w-2 h-2 rounded-full ${liveStatuses[spot.id] !== false ? "bg-[hsl(var(--ev-green))] animate-pulse" : "bg-red-500"}`} />
                             <Switch
                               checked={liveStatuses[spot.id] !== false}
                               onCheckedChange={() => handleToggleLive(spot.id, liveStatuses[spot.id] !== false)}
@@ -391,7 +408,7 @@ export default function Dashboard() {
             <Card className="flex flex-col rounded-2xl hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-lg flex items-center gap-2">
-                  {hostSettings?.listingPaused ? <Pause className="w-4 h-4 text-amber-500" /> : <Play className="w-4 h-4 text-ev-green" />}
+                  {hostSettings?.listingPaused ? <Pause className={`w-4 h-4 ${isDark() ? "text-[hsl(var(--warning))]" : "text-amber-600"}`} /> : <Play className={`w-4 h-4 ${isDark() ? "text-[hsl(var(--ev-green))]" : "text-ev-green"}`} />}
                   Listing Status
                 </CardTitle>
               </CardHeader>
@@ -440,6 +457,9 @@ export default function Dashboard() {
                       <Copy className="w-3.5 h-3.5" /> Copy
                     </Button>
                   </div>
+                  <Button className="w-full mt-3 gap-2 bg-[#25D366] hover:bg-[#1ebe5d] text-white" onClick={handleShareReferral}>
+                    <MessageCircle className="w-4 h-4" /> Share on WhatsApp
+                  </Button>
                 </CardContent>
               </Card>
             )}
