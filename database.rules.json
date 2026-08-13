@@ -33,6 +33,14 @@
         ".validate": "newData.hasChildren(['hostId', 'hostName', 'address', 'city', 'state', 'pincode', 'outletType', 'pricePerHour']) && (!newData.child('hostId').exists() || newData.child('hostId').val() === auth.uid || root.child('admins').child(auth.uid).exists())"
       }
     },
+    "networkStations": {
+      ".read": true,
+      "$stationId": {
+        ".read": true,
+        ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+        ".validate": "newData.hasChildren(['stationName', 'networkOperator', 'address', 'city', 'state', 'pincode', 'coordinates']) && newData.child('coordinates').hasChildren(['lat', 'lng']) && newData.child('coordinates').child('lat').isNumber() && newData.child('coordinates').child('lat').val() >= -90 && newData.child('coordinates').child('lat').val() <= 90 && newData.child('coordinates').child('lng').isNumber() && newData.child('coordinates').child('lng').val() >= -180 && newData.child('coordinates').child('lng').val() <= 180"
+      }
+    },
     "spotRequests": {
       "$spotId": {
         ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || root.child('chargingSpots').child($spotId).child('hostId').val() === auth.uid)",

@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/components/Auth/AuthProvider";
 import { getAllChargingSpots } from "@/lib/hostRegistration";
-import {
+import { getAllNetworkStations, mergeNetworkStations } from "@/lib/networkStationsService";import {
   resolveRiderPosition,
   rankSpotsByDistance,
   RESCUE_WINDOW_MINUTES,
@@ -73,8 +73,9 @@ export default function EmergencyRescue() {
         setSource(pos.source);
         if (pos.error) setError(pos.error);
         const all = await getAllChargingSpots();
+        const net = await getAllNetworkStations();
         if (cancelled) return;
-        const ranked = rankSpotsByDistance(all, pos.lat, pos.lng);
+        const ranked = rankSpotsByDistance(mergeNetworkStations(all, net), pos.lat, pos.lng);
         setSpots(ranked);
         setStage("ready");
       } catch (err) {

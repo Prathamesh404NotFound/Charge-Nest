@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import SEO from "@/components/SEO";
 import NotFound from "@/pages/NotFound";
 import { getAllChargingSpots } from "@/lib/hostRegistration";
-import { getCityBySlug, filterSpotsByCity, CITIES } from "@/lib/cities";
+import { getAllNetworkStations, mergeNetworkStations } from "@/lib/networkStationsService";import { getCityBySlug, filterSpotsByCity, CITIES } from "@/lib/cities";
 
 export default function CityPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -21,10 +21,11 @@ export default function CityPage() {
     if (!city || !city.active) return; // coming-soon cities render without a spot count
     let cancelled = false;
     setLoading(true);
-    getAllChargingSpots()
-      .then((spots) => {
+    Promise.all([getAllChargingSpots(), getAllNetworkStations()])
+      .then(([spots, net]) => {
         if (cancelled) return;
-        setSpotCount(filterSpotsByCity(spots, city.slug).length);
+        const merged = mergeNetworkStations(spots, net);
+        setSpotCount(filterSpotsByCity(merged, city.slug).length);
       })
       .catch(() => {
         if (!cancelled) setSpotCount(null);

@@ -6,7 +6,7 @@ import FAQAccordion from "@/components/FAQAccordion";
 import { Button } from "@/components/ui/button";
 import SEO from "@/components/SEO";
 import { getAllChargingSpots } from "@/lib/hostRegistration";
-import { useEffect, useState } from "react";
+import { getAllNetworkStations, mergeNetworkStations } from "@/lib/networkStationsService";import { useEffect, useState } from "react";
 
 const kolhapurFaqs = [
   { q: "Where can I find EV charging spots in Kolhapur?", a: "VoltSetu lists verified home and commercial charging spots across Kolhapur — from Shahupuri and Rajarampuri to the Railway Station area and Shirol Road. Use the map on our spots page to find the nearest open outlet." },
@@ -28,8 +28,8 @@ export default function CityKolhapur() {
   const [spotCount, setSpotCount] = useState<number | null>(null);
 
   useEffect(() => {
-    getAllChargingSpots()
-      .then((spots) => setSpotCount(spots.length))
+    Promise.all([getAllChargingSpots(), getAllNetworkStations()])
+      .then(([spots, net]) => setSpotCount(mergeNetworkStations(spots, net).length))
       .catch(() => setSpotCount(null));
   }, []);
 

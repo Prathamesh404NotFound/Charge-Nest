@@ -19,7 +19,7 @@ import DestinationSearch, { type Destination } from "@/components/DestinationSea
 import { TripPlannerPanel } from "@/components/TripPlannerPanel";
 import spotsMapImg from "@/assets/spots-map.jpg";
 import { getAllChargingSpots } from "@/lib/hostRegistration";
-import { toast } from "sonner";
+import { getAllNetworkStations, mergeNetworkStations } from "@/lib/networkStationsService";import { toast } from "sonner";
 import SpotsMap from "@/components/SpotsMap";
 import { Capacitor } from "@capacitor/core";
 import { Geolocation } from "@capacitor/geolocation";
@@ -60,8 +60,8 @@ export default function FindSpots() {
   const [routeLoading, setRouteLoading] = useState(false);
 
   useEffect(() => {
-    getAllChargingSpots()
-      .then((data) => setSpots(data))
+    Promise.all([getAllChargingSpots(), getAllNetworkStations()])
+      .then(([data, net]) => setSpots(mergeNetworkStations(data, net)))
       .catch((err) => {
         console.error(err);
         toast.error("Failed to load charging spots");
