@@ -379,6 +379,7 @@ const Index = () => {
                   id={spot.id}
                   name={spot.name}
                   host={spot.hostName}
+                  hostId={spot.hostId}
                   hostPhone={spot.hostPhone}
                   distance="0.8 km"
                   pricePerHour={spot.pricePerHour}

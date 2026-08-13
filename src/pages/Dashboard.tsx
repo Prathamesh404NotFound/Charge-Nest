@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import SpotCard from "@/components/SpotCard";
 import HostRegistrationModal from "@/components/HostRegistration/HostRegistrationModal";
+import SpotEditor from "@/components/SpotEditor";
+import { Pencil } from "lucide-react";
 import { getUserProfile, UserProfile } from "@/lib/userService";
 import { getUserBookings, type BookingRequest } from "@/lib/bookingService";
 import { setLiveStatus, getLiveStatus, subscribeLiveStatus } from "@/lib/liveStatusService";
@@ -40,6 +42,7 @@ export default function Dashboard() {
   const [hostSettings, setHostSettings] = useState<HostSettings | null>(null);
   const [referral, setReferral] = useState<ReferralStats | null>(null);
   const [trendData, setTrendData] = useState<{ labels: string[]; completed: number[] } | null>(null);
+  const [editingSpot, setEditingSpot] = useState<any | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -351,6 +354,13 @@ export default function Dashboard() {
                              <span className={`text-[10px] font-bold uppercase ${isOccupied ? "text-amber-500" : "text-ev-green"}`}>
                               {isOccupied ? "Occupied" : "Free"}
                             </span>
+                            <button
+                              onClick={() => setEditingSpot(spot)}
+                              className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-1 text-[10px] font-semibold text-foreground hover:bg-muted"
+                              title="Edit spot details"
+                            >
+                              <Pencil className="h-3 w-3" /> Edit
+                            </button>
                             <Switch 
                               checked={isOccupied} 
                               onCheckedChange={() => handleToggleOccupancy(spot.id, isOccupied)}

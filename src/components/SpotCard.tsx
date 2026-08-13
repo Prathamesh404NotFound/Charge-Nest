@@ -26,6 +26,8 @@ interface SpotCardProps {
   id?: string;
   name: string;
   host: string;
+  /** Optional host id — enables the host name to link to the public host profile. */
+  hostId?: string;
   hostPhone?: string;
   distance?: string;
   pricePerHour: number;
@@ -83,7 +85,7 @@ const overlayBadgeClass =
   "inline-flex items-center gap-1 px-2 py-1 rounded-full backdrop-blur-md text-white text-xs font-medium shadow-sm";
 
 export default function SpotCard({
-  id, name, host, hostPhone, distance, pricePerHour, rating, reviews,
+  id, name, host, hostId, hostPhone, distance, pricePerHour, rating, reviews,
   isOpen, isVerified, isFeatured, image, outletType, availableHours, amenities, suggestedStop, onBook,
   showLiveStatus = true,
   showCostPerKm = true,
@@ -362,7 +364,17 @@ export default function SpotCard({
         {/* Host trust + price emphasis */}
         <div className="mb-4">
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-2">
-            <span className="font-medium text-foreground/80">{hostFirstName}</span>
+            {hostId ? (
+              <a
+                href={`/host/${encodeURIComponent(hostId)}`}
+                onClick={(e) => e.stopPropagation()}
+                className="font-medium text-foreground/80 hover:text-primary transition-colors underline-offset-2 hover:underline"
+              >
+                {hostFirstName}
+              </a>
+            ) : (
+              <span className="font-medium text-foreground/80">{hostFirstName}</span>
+            )}
             {isVerified && (
               <BadgeCheck className="w-3.5 h-3.5 text-ev-green shrink-0" aria-label="Verified host" />
             )}

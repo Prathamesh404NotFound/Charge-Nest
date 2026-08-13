@@ -289,6 +289,7 @@ export default function FindSpots() {
         id={spot.id}
         name={spot.name}
         host={spot.hostName}
+        hostId={spot.hostId}
         hostPhone={spot.hostPhone}
         distance={
           viewMode === "route" && spot.routeAlongKm !== undefined

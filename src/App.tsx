@@ -50,6 +50,7 @@ const lazyAdminGovStations = () => import("./pages/Admin/AdminGovernmentStations
 const lazyReferralAdmin = () => import("./pages/admin/ReferralAdmin");
 const lazyAdminHeatmap = () => import("./pages/admin/DemandHeatmap");
 const lazyLoyalty = () => import("./pages/Loyalty");
+const lazyHostProfile = () => import("./pages/HostProfile");
 
 const queryClient = new QueryClient();
 
@@ -145,6 +146,11 @@ function AppContent() {
               <LazyPage load={lazyLoyalty} />
             </main>
           </AuthenticatedRoute>
+        } />
+        <Route path="/host/:hostId" element={
+          <main className="min-h-screen pt-24 responsive-container container-lg">
+            <LazyPage load={lazyHostProfile} />
+          </main>
         } />
 
         {/* Admin Routes */}
