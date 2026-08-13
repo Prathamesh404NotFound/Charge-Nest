@@ -92,7 +92,7 @@ export default function SpotCard({
   const { toast } = useToast();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [saved, setSaved] = useState<boolean>(() =>
-    user ? isFavorite(user.uid, id ?? "") : false
+    user ? isFavorite(user.id, id ?? "") : false
   );
   const [imgError, setImgError] = useState(false);
   const [spotReviews, setSpotReviews] = useState<Review[]>([]);
@@ -330,7 +330,7 @@ export default function SpotCard({
                 toast({ title: "Sign in to save spots", description: "Your saved spots travel with your account." });
                 return;
               }
-              const result = toggleFavorite(user.uid, {
+              const result = toggleFavorite(user.id, {
                 id: id ?? "",
                 name,
                 host,

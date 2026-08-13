@@ -271,7 +271,7 @@ export default function BookingModal({ isOpen, onClose, spot }: BookingModalProp
 
   const handleJoinWaitlist = async () => {
     if (!user || !spot.id) return;
-    const result = await joinWaitlist(spot.id, user.uid, user.displayName ?? "Rider", "");
+    const result = await joinWaitlist(spot.id, user.id, user.displayName ?? "Rider", "");
     if (result.ok && result.waitId) {
       setOnWaitlist(true);
       setMyWaitId(result.waitId);
@@ -285,7 +285,7 @@ export default function BookingModal({ isOpen, onClose, spot }: BookingModalProp
 
   const handleLeaveWaitlist = async () => {
     if (!spot.id || !user) return;
-    await leaveMyWaitlist(spot.id, user.uid);
+    await leaveMyWaitlist(spot.id, user.id);
     setOnWaitlist(false);
     setMyWaitId(null);
     toast.success(t("spot.leaveWaitlist"));
@@ -425,7 +425,7 @@ export default function BookingModal({ isOpen, onClose, spot }: BookingModalProp
       amount: depositAmount,
       spotId: spot.id ?? "",
       spotName: spot.name,
-      uid: user?.uid ?? "",
+      uid: user?.id ?? "",
       customerName: user?.displayName ?? undefined,
       customerEmail: user?.email ?? undefined,
     });

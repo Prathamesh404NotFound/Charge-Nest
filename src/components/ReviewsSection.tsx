@@ -47,7 +47,7 @@ export function ReviewsSection({ spotId, spotRating = 0, hostId }: ReviewsSectio
   }, [spotId]);
 
   const { rating: avg, count } = aggregateRating(reviews, spotRating);
-  const ownsSpot = Boolean(user && hostId === user.uid);
+  const ownsSpot = Boolean(user && hostId === user.id);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -64,7 +64,7 @@ export function ReviewsSection({ spotId, spotRating = 0, hostId }: ReviewsSectio
     try {
       const newReview = await submitSpotReview({
         spotId,
-        userId: user.uid,
+        userId: user.id,
         userName: (user as { displayName?: string }).displayName || "VoltSetu rider",
         userPhoto: (user as { photoURL?: string }).photoURL || undefined,
         rating,
