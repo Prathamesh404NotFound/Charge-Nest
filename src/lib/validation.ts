@@ -147,10 +147,10 @@ export const validationRules = {
     pricePerHour: commonValidationRules.price,
   },
   
-  // Government station
-  governmentStation: {
+  // Network station
+  networkStation: {
     stationName: commonValidationRules.name,
-    governmentDepartment: commonValidationRules.name,
+    networkOperator: commonValidationRules.name,
     address: commonValidationRules.name,
     city: commonValidationRules.name,
     state: commonValidationRules.name,

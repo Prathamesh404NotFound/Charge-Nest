@@ -15,13 +15,13 @@ import {
   deleteObject 
 } from 'firebase/storage';
 import { storage } from '@/lib/firebase-services';
-import { GovernmentChargingStation, ImportResult } from '@/types';
+import { NetworkChargingStation, ImportResult } from '@/types';
 
-// Government Station Service Functions
+// Network Station Service Functions
 
-export const adminGetAllGovernmentStations = async (): Promise<GovernmentChargingStation[]> => {
+export const adminGetAllNetworkStations = async (): Promise<NetworkChargingStation[]> => {
   try {
-    const stationsRef = ref(database, 'governmentChargingStations');
+    const stationsRef = ref(database, 'networkStations');
     const snapshot = await get(stationsRef);
     
     if (!snapshot.exists()) {
@@ -39,14 +39,14 @@ export const adminGetAllGovernmentStations = async (): Promise<GovernmentChargin
       lastMaintenance: stations[key].usage?.lastMaintenance ? new Date(stations[key].usage.lastMaintenance) : undefined,
     }));
   } catch (error) {
-    console.error('Error fetching government stations:', error);
-    throw new Error('Failed to fetch government charging stations');
+    console.error('Error fetching network stations:', error);
+    throw new Error('Failed to fetch network charging stations');
   }
 };
 
-export const adminGetGovernmentStation = async (id: string): Promise<GovernmentChargingStation | null> => {
+export const adminGetNetworkStation = async (id: string): Promise<NetworkChargingStation | null> => {
   try {
-    const stationRef = ref(database, `governmentChargingStations/${id}`);
+    const stationRef = ref(database, `networkStations/${id}`);
     const snapshot = await get(stationRef);
     
     if (!snapshot.exists()) {
@@ -64,14 +64,14 @@ export const adminGetGovernmentStation = async (id: string): Promise<GovernmentC
       lastMaintenance: station.usage?.lastMaintenance ? new Date(station.usage.lastMaintenance) : undefined,
     };
   } catch (error) {
-    console.error('Error fetching government station:', error);
-    throw new Error('Failed to fetch government charging station');
+    console.error('Error fetching network station:', error);
+    throw new Error('Failed to fetch network charging station');
   }
 };
 
-export const adminCreateGovernmentStation = async (stationData: Omit<GovernmentChargingStation, 'id' | 'createdAt' | 'updatedAt'>): Promise<GovernmentChargingStation> => {
+export const adminCreateNetworkStation = async (stationData: Omit<NetworkChargingStation, 'id' | 'createdAt' | 'updatedAt'>): Promise<NetworkChargingStation> => {
   try {
-    const stationsRef = ref(database, 'governmentChargingStations');
+    const stationsRef = ref(database, 'networkStations');
     const newStationRef = push(stationsRef);
     const stationId = newStationRef.key;
     
@@ -79,7 +79,7 @@ export const adminCreateGovernmentStation = async (stationData: Omit<GovernmentC
       throw new Error('Failed to generate station ID');
     }
     
-    const station: GovernmentChargingStation = {
+    const station: NetworkChargingStation = {
       ...stationData,
       id: stationId,
       createdAt: new Date(),
@@ -94,54 +94,54 @@ export const adminCreateGovernmentStation = async (stationData: Omit<GovernmentC
     await set(newStationRef, station);
     return station;
   } catch (error) {
-    console.error('Error creating government station:', error);
-    throw new Error('Failed to create government charging station');
+    console.error('Error creating network station:', error);
+    throw new Error('Failed to create network charging station');
   }
 };
 
-export const adminUpdateGovernmentStation = async (id: string, updates: Partial<GovernmentChargingStation>): Promise<void> => {
+export const adminUpdateNetworkStation = async (id: string, updates: Partial<NetworkChargingStation>): Promise<void> => {
   try {
-    const stationRef = ref(database, `governmentChargingStations/${id}`);
+    const stationRef = ref(database, `networkStations/${id}`);
     await update(stationRef, { 
       ...updates, 
       updatedAt: serverTimestamp() 
     });
   } catch (error) {
-    console.error('Error updating government station:', error);
-    throw new Error('Failed to update government charging station');
+    console.error('Error updating network station:', error);
+    throw new Error('Failed to update network charging station');
   }
 };
 
-export const adminDeleteGovernmentStation = async (id: string): Promise<void> => {
+export const adminDeleteNetworkStation = async (id: string): Promise<void> => {
   try {
-    await remove(ref(database, `governmentChargingStations/${id}`));
+    await remove(ref(database, `networkStations/${id}`));
   } catch (error) {
-    console.error('Error deleting government station:', error);
-    throw new Error('Failed to delete government charging station');
+    console.error('Error deleting network station:', error);
+    throw new Error('Failed to delete network charging station');
   }
 };
 
-export const adminSearchGovernmentStations = async (searchTerm: string): Promise<GovernmentChargingStation[]> => {
+export const adminSearchNetworkStations = async (searchTerm: string): Promise<NetworkChargingStation[]> => {
   try {
-    const stations = await adminGetAllGovernmentStations();
+    const stations = await adminGetAllNetworkStations();
     const lowerSearchTerm = searchTerm.toLowerCase();
     
     return stations.filter(station => 
       station.stationName.toLowerCase().includes(lowerSearchTerm) ||
-      station.governmentDepartment.toLowerCase().includes(lowerSearchTerm) ||
+      station.networkOperator.toLowerCase().includes(lowerSearchTerm) ||
       station.address.toLowerCase().includes(lowerSearchTerm) ||
       station.city.toLowerCase().includes(lowerSearchTerm) ||
       station.state.toLowerCase().includes(lowerSearchTerm)
     );
   } catch (error) {
-    console.error('Error searching government stations:', error);
-    throw new Error('Failed to search government charging stations');
+    console.error('Error searching network stations:', error);
+    throw new Error('Failed to search network charging stations');
   }
 };
 
-export const adminUpdateStationStatus = async (id: string, status: GovernmentChargingStation['availabilityStatus']): Promise<void> => {
+export const adminUpdateStationStatus = async (id: string, status: NetworkChargingStation['availabilityStatus']): Promise<void> => {
   try {
-    const stationRef = ref(database, `governmentChargingStations/${id}`);
+    const stationRef = ref(database, `networkStations/${id}`);
     await update(stationRef, { 
       availabilityStatus: status, 
       updatedAt: serverTimestamp() 
@@ -152,9 +152,9 @@ export const adminUpdateStationStatus = async (id: string, status: GovernmentCha
   }
 };
 
-export const adminUpdateVerificationStatus = async (id: string, status: GovernmentChargingStation['verificationStatus']): Promise<void> => {
+export const adminUpdateVerificationStatus = async (id: string, status: NetworkChargingStation['verificationStatus']): Promise<void> => {
   try {
-    const stationRef = ref(database, `governmentChargingStations/${id}`);
+    const stationRef = ref(database, `networkStations/${id}`);
     await update(stationRef, { 
       verificationStatus: status,
       verifiedBy: auth.currentUser?.displayName || 'Admin',
@@ -170,7 +170,7 @@ export const adminUpdateVerificationStatus = async (id: string, status: Governme
 // File upload functions
 export const adminUploadStationImage = async (file: File, stationId: string, imageName: string): Promise<string> => {
   try {
-    const fileRef = storageRef(storage, `governmentStations/${stationId}/${imageName}`);
+    const fileRef = storageRef(storage, `networkStations/${stationId}/${imageName}`);
     await uploadBytes(fileRef, file);
     const downloadURL = await getDownloadURL(fileRef);
     return downloadURL;
@@ -182,7 +182,7 @@ export const adminUploadStationImage = async (file: File, stationId: string, ima
 
 export const adminDeleteStationImage = async (stationId: string, imageName: string): Promise<void> => {
   try {
-    const fileRef = storageRef(storage, `governmentStations/${stationId}/${imageName}`);
+    const fileRef = storageRef(storage, `networkStations/${stationId}/${imageName}`);
     await deleteObject(fileRef);
   } catch (error) {
     console.error('Error deleting station image:', error);
@@ -191,7 +191,7 @@ export const adminDeleteStationImage = async (stationId: string, imageName: stri
 };
 
 // Bulk import functions
-export const adminImportGovernmentStations = async (stations: any[]): Promise<ImportResult> => {
+export const adminImportNetworkStations = async (stations: any[]): Promise<ImportResult> => {
   const result: ImportResult = {
     success: 0,
     failed: 0,
@@ -218,7 +218,7 @@ export const adminImportGovernmentStations = async (stations: any[]): Promise<Im
       }
 
       // Check for duplicates
-      const existingStations = await adminGetAllGovernmentStations();
+      const existingStations = await adminGetAllNetworkStations();
       const isDuplicate = existingStations.some(station => 
         station.stationName.toLowerCase() === stationData.stationName.toLowerCase() ||
         (station.coordinates.lat === stationData.coordinates.lat && 
@@ -237,7 +237,7 @@ export const adminImportGovernmentStations = async (stations: any[]): Promise<Im
       }
 
       // Create station
-      const createdStation = await adminCreateGovernmentStation(stationData);
+      const createdStation = await adminCreateNetworkStation(stationData);
       result.imported.push(createdStation);
       result.success++;
       
@@ -261,8 +261,8 @@ const validateStationData = (stationData: any): { field: string; message: string
     return { field: 'stationName', message: 'Station name is required' };
   }
   
-  if (!stationData.governmentDepartment || stationData.governmentDepartment.trim() === '') {
-    return { field: 'governmentDepartment', message: 'Government department is required' };
+  if (!stationData.networkOperator || stationData.networkOperator.trim() === '') {
+    return { field: 'networkOperator', message: 'Network operator is required' };
   }
   
   if (!stationData.address || stationData.address.trim() === '') {
@@ -311,12 +311,12 @@ const validateStationData = (stationData: any): { field: string; message: string
 };
 
 // Pagination functions
-export const adminGetGovernmentStationsPaginated = async (
+export const adminGetNetworkStationsPaginated = async (
   page: number = 1, 
   limit: number = 10
-): Promise<{ stations: GovernmentChargingStation[]; total: number; }> => {
+): Promise<{ stations: NetworkChargingStation[]; total: number; }> => {
   try {
-    const stationsRef = ref(database, 'governmentChargingStations');
+    const stationsRef = ref(database, 'networkStations');
     const snapshot = await get(stationsRef);
     
     if (!snapshot.exists()) {
@@ -343,15 +343,15 @@ export const adminGetGovernmentStationsPaginated = async (
       total,
     };
   } catch (error) {
-    console.error('Error fetching paginated government stations:', error);
-    throw new Error('Failed to fetch paginated government charging stations');
+    console.error('Error fetching paginated network stations:', error);
+    throw new Error('Failed to fetch paginated network charging stations');
   }
 };
 
 // Statistics functions
-export const adminGetGovernmentStationStats = async () => {
+export const adminGetNetworkStationStats = async () => {
   try {
-    const stations = await adminGetAllGovernmentStations();
+    const stations = await adminGetAllNetworkStations();
     
     const stats = {
       total: stations.length,
@@ -369,7 +369,7 @@ export const adminGetGovernmentStationStats = async () => {
     
     return stats;
   } catch (error) {
-    console.error('Error fetching government station stats:', error);
-    throw new Error('Failed to fetch government station statistics');
+    console.error('Error fetching network station stats:', error);
+    throw new Error('Failed to fetch network station statistics');
   }
 };

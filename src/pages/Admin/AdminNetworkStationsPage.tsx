@@ -29,7 +29,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { useAdminPermissions } from '@/hooks/useAdminAuth';
-import { GovernmentChargingStation } from '@/types';
+import { NetworkChargingStation } from '@/types';
 import AddStationModal from '@/components/Admin/AddStationModal';
 import {
   Table,
@@ -71,27 +71,27 @@ import {
   TabsTrigger,
 } from '@/components/ui/tabs';
 import {
-  adminGetAllGovernmentStations,
+  adminGetAllNetworkStations,
   adminUpdateStationStatus,
   adminUpdateVerificationStatus,
-  adminDeleteGovernmentStation,
-  adminSearchGovernmentStations,
-  adminImportGovernmentStations,
-} from '@/services/governmentStationService';
+  adminDeleteNetworkStation,
+  adminSearchNetworkStations,
+  adminImportNetworkStations,
+} from '@/services/networkStationService';
 import { toast } from 'sonner';
 import ResponsiveContainer from '@/components/ui/responsive-container';
 import ResponsiveGrid from '@/components/ui/responsive-grid';
 import SEO from "@/components/SEO";
 
-const AdminGovernmentStationsPage: React.FC = () => {
+const AdminNetworkStationsPage: React.FC = () => {
   const { canManageSpots, canEditSpots, canDeleteSpots } = useAdminPermissions();
-  const [stations, setStations] = useState<GovernmentChargingStation[]>([]);
+  const [stations, setStations] = useState<NetworkChargingStation[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStation, setSelectedStation] = useState<GovernmentChargingStation | null>(null);
+  const [selectedStation, setSelectedStation] = useState<NetworkChargingStation | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<'all' | GovernmentChargingStation['availabilityStatus']>('all');
-  const [verificationFilter, setVerificationFilter] = useState<'all' | GovernmentChargingStation['verificationStatus']>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | NetworkChargingStation['availabilityStatus']>('all');
+  const [verificationFilter, setVerificationFilter] = useState<'all' | NetworkChargingStation['verificationStatus']>('all');
   const [error, setError] = useState<string>('');
   const [actionLoading, setActionLoading] = useState(false);
   const [addStationModalOpen, setAddStationModalOpen] = useState(false);
@@ -109,20 +109,20 @@ const AdminGovernmentStationsPage: React.FC = () => {
     try {
       setLoading(true);
       setError('');
-      const data = await adminGetAllGovernmentStations();
+      const data = await adminGetAllNetworkStations();
       setStations(data);
     } catch (err) {
       console.error('Error fetching stations:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch government stations');
+      setError(err instanceof Error ? err.message : 'Failed to fetch network stations');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStationCreated = (newStation: GovernmentChargingStation) => {
+  const handleStationCreated = (newStation: NetworkChargingStation) => {
     setStations(prev => [newStation, ...prev]);
     setAddStationModalOpen(false);
-    toast.success('Government station created successfully!');
+    toast.success('Network station created successfully!');
   };
 
   const handleSearch = async () => {
@@ -134,11 +134,11 @@ const AdminGovernmentStationsPage: React.FC = () => {
     try {
       setLoading(true);
       setError('');
-      const searchedStations = await adminSearchGovernmentStations(searchTerm);
+      const searchedStations = await adminSearchNetworkStations(searchTerm);
       setStations(searchedStations);
     } catch (error) {
-      console.error('Error searching government stations:', error);
-      setError(error instanceof Error ? error.message : 'Failed to search government charging stations');
+      console.error('Error searching network stations:', error);
+      setError(error instanceof Error ? error.message : 'Failed to search network charging stations');
     } finally {
       setLoading(false);
     }
@@ -168,19 +168,19 @@ const AdminGovernmentStationsPage: React.FC = () => {
     try {
       setActionLoading(true);
       setError('');
-      await adminDeleteGovernmentStation(selectedStation.id);
+      await adminDeleteNetworkStation(selectedStation.id);
       setStations(stations.filter(s => s.id !== selectedStation.id));
       setDeleteDialogOpen(false);
       setSelectedStation(null);
     } catch (error) {
-      console.error('Error deleting government station:', error);
-      setError(error instanceof Error ? error.message : 'Failed to delete government charging station');
+      console.error('Error deleting network station:', error);
+      setError(error instanceof Error ? error.message : 'Failed to delete network charging station');
     } finally {
       setActionLoading(false);
     }
   };
 
-  const handleStatusChange = async (stationId: string, newStatus: GovernmentChargingStation['availabilityStatus']) => {
+  const handleStatusChange = async (stationId: string, newStatus: NetworkChargingStation['availabilityStatus']) => {
     if (!canEditSpots) return;
 
     try {
@@ -198,7 +198,7 @@ const AdminGovernmentStationsPage: React.FC = () => {
     }
   };
 
-  const handleVerificationChange = async (stationId: string, newStatus: GovernmentChargingStation['verificationStatus']) => {
+  const handleVerificationChange = async (stationId: string, newStatus: NetworkChargingStation['verificationStatus']) => {
     if (!canEditSpots) return;
 
     try {
@@ -216,7 +216,7 @@ const AdminGovernmentStationsPage: React.FC = () => {
     }
   };
 
-  const getStatusBadgeColor = (status: GovernmentChargingStation['availabilityStatus']) => {
+  const getStatusBadgeColor = (status: NetworkChargingStation['availabilityStatus']) => {
     switch (status) {
       case 'active':
         return 'bg-green-100 text-green-800';
@@ -231,7 +231,7 @@ const AdminGovernmentStationsPage: React.FC = () => {
     }
   };
 
-  const getVerificationBadgeColor = (status: GovernmentChargingStation['verificationStatus']) => {
+  const getVerificationBadgeColor = (status: NetworkChargingStation['verificationStatus']) => {
     switch (status) {
       case 'verified':
         return 'bg-green-100 text-green-800';
@@ -244,7 +244,7 @@ const AdminGovernmentStationsPage: React.FC = () => {
     }
   };
 
-  const getStatusIcon = (status: GovernmentChargingStation['availabilityStatus']) => {
+  const getStatusIcon = (status: NetworkChargingStation['availabilityStatus']) => {
     switch (status) {
       case 'active':
         return CheckCircle;
@@ -270,6 +270,31 @@ const AdminGovernmentStationsPage: React.FC = () => {
     return new Intl.DateTimeFormat('en-IN').format(date);
   };
 
+  // Simple RFC-4180-aware CSV row parser (handles quoted fields containing commas)
+  const parseCsvRow = (row: string): string[] => {
+    const out: string[] = [];
+    let cur = '';
+    let inQuotes = false;
+    for (let i = 0; i < row.length; i++) {
+      const ch = row[i];
+      if (ch === '"') {
+        if (inQuotes && row[i + 1] === '"') {
+          cur += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (ch === ',' && !inQuotes) {
+        out.push(cur);
+        cur = '';
+      } else {
+        cur += ch;
+      }
+    }
+    out.push(cur);
+    return out;
+  };
+
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -283,10 +308,10 @@ const AdminGovernmentStationsPage: React.FC = () => {
           // Parse CSV file
           const text = await file.text();
           const lines = text.split('\n').filter(line => line.trim());
-          const headers = lines[0].split(',').map(h => h.trim());
+          const headers = parseCsvRow(lines[0]).map(h => h.trim().toLowerCase());
 
           parsedData = lines.slice(1).map((line, index) => {
-            const values = line.split(',').map(v => v.trim());
+            const values = parseCsvRow(line).map(v => v.trim());
             const station: any = {};
 
             headers.forEach((header, i) => {
@@ -296,7 +321,42 @@ const AdminGovernmentStationsPage: React.FC = () => {
                   station.stationName = value;
                   break;
                 case 'governmentdepartment':
-                  station.governmentDepartment = value;
+                case 'networkoperator':
+                case 'network':
+                  station.networkOperator = value;
+                  break;
+                case 'stationtype':
+                  station.stationType = value;
+                  break;
+                case 'priceperminute':
+                  station.pricePerMinute = value;
+                  break;
+                case 'freecharging':
+                  station.freeCharging = value;
+                  break;
+                case 'weekdayshours':
+                  station.weekdaysHours = value;
+                  break;
+                case 'weekendshours':
+                  station.weekendsHours = value;
+                  break;
+                case 'holidayshours':
+                  station.holidaysHours = value;
+                  break;
+                case 'contactemail':
+                  station.contactEmail = value;
+                  break;
+                case 'contactwebsite':
+                  station.contactWebsite = value;
+                  break;
+                case 'notes':
+                  station.notes = value;
+                  break;
+                case 'verificationstatus':
+                  station.verificationStatus = value;
+                  break;
+                case 'isfeatured':
+                  station.isFeatured = value;
                   break;
                 case 'address':
                   station.address = value;
@@ -322,7 +382,7 @@ const AdminGovernmentStationsPage: React.FC = () => {
                   station.numberOfChargers = parseInt(value) || 1;
                   break;
                 case 'chargertypes':
-                  station.chargerTypes = value.split(';').map(t => t.trim()).filter(t => t);
+                  station.chargerTypes = value.split(/[;,]/).map(t => t.trim()).filter(t => t);
                   break;
                 case 'availabilitystatus':
                   station.availabilityStatus = value.toLowerCase() || 'active';
@@ -331,6 +391,7 @@ const AdminGovernmentStationsPage: React.FC = () => {
                   station.pricePerHour = parseFloat(value) || 0;
                   break;
                 case 'phone':
+                case 'contactphone':
                   station.phone = value;
                   break;
                 case 'description':
@@ -344,7 +405,7 @@ const AdminGovernmentStationsPage: React.FC = () => {
             // Create proper structure
             return {
               stationName: station.stationName || `Station ${index + 1}`,
-              governmentDepartment: station.governmentDepartment || 'Unknown',
+              networkOperator: station.networkOperator || 'Unknown',
               address: station.address || 'Unknown Address',
               city: station.city || 'Unknown City',
               state: station.state || 'Unknown State',
@@ -353,12 +414,25 @@ const AdminGovernmentStationsPage: React.FC = () => {
               numberOfChargers: station.numberOfChargers || 1,
               chargerTypes: station.chargerTypes || ['Type 2'],
               availabilityStatus: station.availabilityStatus || 'active',
-              pricing: { pricePerHour: station.pricePerHour || 0 },
-              workingHours: { weekdays: '9:00 AM - 6:00 PM', weekends: '10:00 AM - 4:00 PM' },
-              contact: { phone: station.phone || '' },
-              description: station.description || 'Government charging station',
-              verificationStatus: 'pending',
-              isFeatured: false,
+              pricing: {
+                pricePerHour: station.pricePerHour ?? 0,
+                ...(station.pricePerMinute ? { pricePerMinute: parseFloat(station.pricePerMinute) || 0 } : {}),
+                ...(String(station.freeCharging || '').toLowerCase() === 'true' ? { freeCharging: true } : {}),
+              },
+              workingHours: {
+                weekdays: station.weekdaysHours || '9:00 AM - 6:00 PM',
+                weekends: station.weekendsHours || '10:00 AM - 4:00 PM',
+                ...(station.holidaysHours ? { holidays: station.holidaysHours } : {}),
+              },
+              contact: {
+                phone: station.phone || '',
+                ...(station.contactEmail ? { email: station.contactEmail } : {}),
+                ...(station.contactWebsite ? { website: station.contactWebsite } : {}),
+              },
+              description: station.description || 'Network charging station',
+              ...(station.notes ? { notes: station.notes } : {}),
+              verificationStatus: (String(station.verificationStatus || 'pending').toLowerCase() === 'rejected') ? 'rejected' : (String(station.verificationStatus || '').toLowerCase() === 'verified' ? 'verified' : 'pending'),
+              isFeatured: String(station.isFeatured || '').toLowerCase() === 'true',
               amenities: [],
               technical: { powerRating: '50kW', voltage: '400V', current: '125A', connectorTypes: station.chargerTypes || ['Type 2'] },
               usage: { totalCharges: 0, averageDailyUsage: 0 }
@@ -392,7 +466,7 @@ const AdminGovernmentStationsPage: React.FC = () => {
       setError('');
 
       // Call the actual import function
-      const result = await adminImportGovernmentStations(importPreview);
+      const result = await adminImportNetworkStations(importPreview);
       setImportResult(result);
 
       if (result.success > 0) {
@@ -428,31 +502,24 @@ const AdminGovernmentStationsPage: React.FC = () => {
     // Create CSV template data with all possible options
     const templateData = [
       // Header row
-      'Station Name,Station Type,Government Department,Address,City,State,Pincode,Latitude,Longitude,Number of Chargers,Charger Types,Availability Status,Price per Hour,Price per Minute,Free Charging,Weekdays Hours,Weekends Hours,Holidays Hours,Contact Phone,Contact Email,Contact Website,Description,Notes,Verification Status,Is Featured',
+      'Station Name,Station Type,Network Operator,Address,City,State,Pincode,Latitude,Longitude,Number of Chargers,Charger Types,Availability Status,Price per Hour,Price per Minute,Free Charging,Weekdays Hours,Weekends Hours,Holidays Hours,Contact Phone,Contact Email,Contact Website,Description,Notes,Verification Status,Is Featured',
 
       // Example 1: Railway Station - Active
       'Central Railway Station,Public Charging Station,Indian Railways,Platform 1,Mumbai,Maharashtra,400001,19.0760,72.8777,4,"Type 2,CCS",active,50,1,,24/7,24/7,,+91-22-23004000,info@railway.gov.in,www.railway.gov.in,Main charging station near platform 1,Located near main entrance,pending,false',
-
-      // Example 2: Government Office - Maintenance
-      'State Secretariat,Government Office,State Government,Secretariat Building,Thiruvananthapuram,Kerala,695001,8.5060,76.9726,2,"Type 2,Standard 3pin",maintenance,75,2,,9 AM - 6 PM,10 AM - 4 PM,Closed,+91-471-2320000,secretariat@kerala.gov.in,www.kerala.gov.in,Charging for government officials,Staff only access,pending,false',
-
-      // Example 3: Educational Institution - Inactive
-      'IIT Delhi Charging Hub,Educational Institution,Ministry of Education,Main Campus,New Delhi,Delhi,110016,28.5450,77.1927,6,"CCS,Type 2,CHAdeMO",inactive,40,0.5,,8 AM - 10 PM,9 AM - 9 PM,Semester break,+91-11-26591013,charging@iitd.ac.in,www.iitd.ac.in/charging,Student and faculty charging,Priority for students,verified,true',
-
-      // Example 4: Hospital - Coming Soon
-      'AIIMS Medical Center,Hospital,Ministry of Health,Main Building,New Delhi,Delhi,110029,28.5670,77.2100,8,"Type 2,CCS,Standard 3pin",coming_soon,60,0.75,,24/7,24/7,24/7,+91-11-26588500,info@aiims.edu,www.aiims.edu,Medical emergency charging priority,Available for emergency services,pending,true',
-
-      // Example 5: Parking Area - Free Charging
-      'Connaught Place Parking,Parking Area,Municipal Corporation,Inner Circle,New Delhi,Delhi,110001,28.6310,77.2090,12,"Type 2,Standard 3pin,5 Amp",active,0,,true,24/7,24/7,24/7,+91-11-23361225,parking@ndmc.gov.in,www.ndmc.gov.in,Free public parking charging,2 hour limit,verified,false',
-
-      // Example 6: Highway Charging Station
-      'NH48 Highway Station,Highway Charging,National Highway Authority,NH48 Service Area,Gurgaon,Haryana,122001,28.4595,77.0266,10,"CCS,Type 2,CHAdeMO",active,80,1.5,,24/7,24/7,24/7,+91-124-2280000,highway@nhai.gov.in,www.nhai.gov.in,Highway fast charging,Truck and car charging,verified,true',
-
-      // Example 7: Urban Center - Complex Pricing
-      'Cyber Hub Urban Center,Urban Center,Municipal Corporation,Cyber Hub,Gurgaon,Haryana,122002,28.5060,77.0840,16,"Type 2,CCS,Standard 3pin,16 Amp",active,45,0.8,,10 AM - 10 PM,10 AM - 8 PM,Closed,+91-124-4140000,cyberhub@gurgaon.gov.in,www.cyberhub.in,Business district charging,Peak hours pricing,pending,false',
-
-      // Example 8: Rural Area - Basic Setup
-      'Village Community Center,Rural Area,Panchayat,Village Square,Rural District,Maharashtra,425001,18.5204,76.8567,2,"Standard 3pin,5 Amp",active,25,0.3,,6 AM - 8 PM,7 AM - 7 PM,Closed,+91-9123456789,village@rural.gov.in,,Community charging for villagers,Free for residents,pending,false'
+      // Example 2: Network Operator - Active
+      'Tata Power EZ Charge Hub,Public Charging Station,Tata Power,Station Road,Mumbai,Maharashtra,400001,19.0760,72.8777,6,"CCS,Type 2",active,40,0.6,,24/7,24/7,24/7,+91-1800-833-2233,info@tatapower.com,www.tatapower.com,Fast DC charging hub,Bike-friendly parking,pending,false',
+      // Example 3: Network Operator - Maintenance
+      'BPCL eDrive Kolhapur,Public Charging Station,BPCL,NH-4 Service Area,Kolhapur,Maharashtra,416001,16.7000,74.2500,2,"CCS",maintenance,35,0.5,,24/7,24/7,Closed,+91-1800-22-4344,support@bpclev.in,www.bpclev.in,Highway fast charging,Under routine maintenance,pending,true',
+      // Example 4: Network Operator - Coming Soon
+      'Ather Grid Ichalkaranji,Public Charging Station,Ather Energy,Main Market Road,Ichalkaranji,Maharashtra,416115,16.6900,74.4700,4,"Type 2",coming_soon,30,0.4,,9 AM - 9 PM,10 AM - 8 PM,,+91-92400-13861,grid@atherenergy.com,www.atherenergy.com,Bike fast-charging point,Opens next month,pending,false',
+      // Example 5: Free Charging
+      'Mall Parking Free Charge,Parking Area,Municipal Corporation,Mall Road,Pune,Maharashtra,411001,18.5204,73.8567,8,"Type 2,Standard 3pin",active,0,,true,24/7,24/7,24/7,+91-20-23361225,parking@pune.gov.in,www.pune.gov.in,Free public parking charging,2 hour limit,verified,false',
+      // Example 6: Highway Charging
+      'NH48 Highway Station,Highway Charging,Adani Energisation,NH48 Service Area,Kolhapur,Maharashtra,416122,16.7800,74.2800,10,"CCS,Type 2,CHAdeMO",active,80,1.5,,24/7,24/7,24/7,+91-99000-00000,highway@adani.com,www.adanipower.com,Highway fast charging,Truck and bike charging,verified,true',
+      // Example 7: Urban Center
+      'City Mall Charging Point,Urban Center,ChargeZone,Mall Parking,Mumbai,Maharashtra,400051,19.1176,72.9060,12,"Type 2,CCS,Standard 3pin",active,45,0.8,,10 AM - 10 PM,10 AM - 8 PM,Closed,+91-1800-121-2025,help@chargezone.in,www.chargezone.in,Mall parking charging,Peak hours pricing,pending,false',
+      // Example 8: Rural Area
+      'Village Community Charger,Rural Area,E-Fill,Village Square,Kagal,Maharashtra,416201,16.5372,74.3196,2,"CCS",active,25,0.3,,6 AM - 8 PM,7 AM - 7 PM,Closed,+91-94220-47176,support@efill.in,,Community charging for villagers,Free for residents,pending,false'
     ];
 
     // Create CSV blob
@@ -463,7 +530,7 @@ const AdminGovernmentStationsPage: React.FC = () => {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', 'government_stations_template.csv');
+    link.setAttribute('download', 'network_stations_template.csv');
     link.style.visibility = 'hidden';
 
     // Trigger download
@@ -483,7 +550,7 @@ const AdminGovernmentStationsPage: React.FC = () => {
         <div className="text-center">
           <Shield className="w-12 h-12 text-destructive mx-auto mb-4" />
           <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
-          <p className="text-muted-foreground">You don't have permission to manage government charging stations.</p>
+          <p className="text-muted-foreground">You don't have permission to manage network charging stations.</p>
         </div>
       </div>
     );
@@ -492,15 +559,15 @@ const AdminGovernmentStationsPage: React.FC = () => {
   return (
     <div className="space-y-6 p-6">
       <SEO 
-        title="Manage Government Stations | Admin | VoltSetu"
-        description="Monitor and manage government-owned EV charging infrastructure and verification status."
+        title="Manage Network Stations | Admin | VoltSetu"
+        description="Monitor and manage network EV charging infrastructure and verification status."
         noindex={true}
       />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Government Charging Stations</h1>
-          <p className="text-muted-foreground">Manage government-owned charging infrastructure</p>
+          <h1 className="text-3xl font-bold text-foreground">Network Charging Stations</h1>
+          <p className="text-muted-foreground">Manage network charging infrastructure</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={handleDownloadTemplate}>
@@ -610,20 +677,20 @@ const AdminGovernmentStationsPage: React.FC = () => {
       {/* Stations Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Government Charging Stations ({filteredStations.length})</CardTitle>
+          <CardTitle>Network Charging Stations ({filteredStations.length})</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              <p className="ml-4 text-muted-foreground">Loading government charging stations...</p>
+              <p className="ml-4 text-muted-foreground">Loading network charging stations...</p>
             </div>
           ) : filteredStations.length === 0 ? (
             <div className="text-center py-12">
               <Building className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No government stations found</h3>
+              <h3 className="text-lg font-semibold mb-2">No network stations found</h3>
               <p className="text-muted-foreground">
-                {searchTerm ? 'Try adjusting your search terms' : 'No government stations match the current filter'}
+                {searchTerm ? 'Try adjusting your search terms' : 'No network stations match the current filter'}
               </p>
             </div>
           ) : (
@@ -670,7 +737,7 @@ const AdminGovernmentStationsPage: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           <div>
-                            <div className="font-medium">{station.governmentDepartment}</div>
+                            <div className="font-medium">{station.networkOperator}</div>
                             <div className="text-sm text-muted-foreground">{station.contact.phone}</div>
                           </div>
                         </TableCell>
@@ -789,7 +856,7 @@ const AdminGovernmentStationsPage: React.FC = () => {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Government Station</AlertDialogTitle>
+            <AlertDialogTitle>Delete Network Station</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete "{selectedStation?.stationName}"? This action cannot be undone and will remove all associated data including charging history and maintenance records.
             </AlertDialogDescription>
@@ -811,9 +878,9 @@ const AdminGovernmentStationsPage: React.FC = () => {
       <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Import Government Stations</DialogTitle>
+            <DialogTitle>Import Network Stations</DialogTitle>
             <DialogDescription>
-              Upload a CSV or Excel file to import multiple government charging stations at once.
+              Upload a CSV or Excel file to import multiple network charging stations at once.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-6">
@@ -864,7 +931,7 @@ const AdminGovernmentStationsPage: React.FC = () => {
                       {importPreview.map((station, index) => (
                         <TableRow key={index}>
                           <TableCell>{station.stationName}</TableCell>
-                          <TableCell>{station.governmentDepartment}</TableCell>
+                          <TableCell>{station.networkOperator}</TableCell>
                           <TableCell>{station.city}</TableCell>
                           <TableCell>{station.availabilityStatus}</TableCell>
                           <TableCell>{station.numberOfChargers}</TableCell>
@@ -926,4 +993,4 @@ const AdminGovernmentStationsPage: React.FC = () => {
   );
 };
 
-export default AdminGovernmentStationsPage;
+export default AdminNetworkStationsPage;

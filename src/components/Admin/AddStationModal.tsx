@@ -23,15 +23,15 @@ import {
   Shield
 } from 'lucide-react';
 import { useAdminPermissions } from '@/hooks/useAdminAuth';
-import { GovernmentChargingStation } from '@/types';
-import { adminCreateGovernmentStation } from '@/services/governmentStationService';
+import { NetworkChargingStation } from '@/types';
+import { adminCreateNetworkStation } from '@/services/networkStationService';
 import { validateForm, validationRules } from '@/lib/validation';
 import { LoadingSpinner } from '@/components/ui/loading-states';
 
 interface AddStationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (station: GovernmentChargingStation) => void;
+  onSuccess?: (station: NetworkChargingStation) => void;
 }
 
 const GOVERNMENT_DEPARTMENTS = [
@@ -57,7 +57,7 @@ const CHARGER_TYPES = [
 
 const STATION_TYPES = [
   'Public Charging Station',
-  'Government Office',
+  'Network Operator',
   'Educational Institution',
   'Hospital',
   'Parking Area',
@@ -69,7 +69,7 @@ const STATION_TYPES = [
 interface StationFormData {
   stationName: string;
   stationType: string;
-  governmentDepartment: string;
+  networkOperator: string;
   address: string;
   city: string;
   state: string;
@@ -102,7 +102,7 @@ interface StationFormData {
 const defaultFormData: StationFormData = {
   stationName: '',
   stationType: '',
-  governmentDepartment: '',
+  networkOperator: '',
   address: '',
   city: '',
   state: '',
@@ -171,7 +171,7 @@ export default function AddStationModal({ isOpen, onClose, onSuccess }: AddStati
     // Required fields validation
     if (!formData.stationName.trim()) formErrors.stationName = 'Station name is required';
     if (!formData.stationType) formErrors.stationType = 'Station type is required';
-    if (!formData.governmentDepartment) formErrors.governmentDepartment = 'Government department is required';
+    if (!formData.networkOperator) formErrors.networkOperator = 'Network operator is required';
     if (!formData.address.trim()) formErrors.address = 'Address is required';
     if (!formData.city.trim()) formErrors.city = 'City is required';
     if (!formData.state.trim()) formErrors.state = 'State is required';
@@ -212,7 +212,7 @@ export default function AddStationModal({ isOpen, onClose, onSuccess }: AddStati
     setIsSubmitting(true);
     try {
       // Create station
-      const stationData: Omit<GovernmentChargingStation, 'id' | 'createdAt' | 'updatedAt'> = {
+      const stationData: Omit<NetworkChargingStation, 'id' | 'createdAt' | 'updatedAt'> = {
         ...formData,
         images: [],
         logo: '',
@@ -231,14 +231,14 @@ export default function AddStationModal({ isOpen, onClose, onSuccess }: AddStati
         }
       };
 
-      const createdStation = await adminCreateGovernmentStation(stationData);
+      const createdStation = await adminCreateNetworkStation(stationData);
 
-      toast.success('Government station created successfully!');
+      toast.success('Network station created successfully!');
       onSuccess?.(createdStation);
       handleClose();
     } catch (error) {
       console.error('Error creating station:', error);
-      toast.error('Failed to create government station');
+      toast.error('Failed to create network station');
     } finally {
       setIsSubmitting(false);
     }
@@ -257,7 +257,7 @@ export default function AddStationModal({ isOpen, onClose, onSuccess }: AddStati
           <div className="text-center py-8">
             <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">Access Denied</h3>
-            <p className="text-muted-foreground">You don't have permission to create government stations.</p>
+            <p className="text-muted-foreground">You don't have permission to create network stations.</p>
           </div>
         </DialogContent>
       </Dialog>
@@ -268,7 +268,7 @@ export default function AddStationModal({ isOpen, onClose, onSuccess }: AddStati
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add New Government Charging Station</DialogTitle>
+          <DialogTitle>Add New Network Charging Station</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -304,8 +304,8 @@ export default function AddStationModal({ isOpen, onClose, onSuccess }: AddStati
               </div>
 
               <div>
-                <Label htmlFor="governmentDepartment">Government Department *</Label>
-                <Select value={formData.governmentDepartment} onValueChange={(value) => handleInputChange('governmentDepartment', value)}>
+                <Label htmlFor="networkOperator">Network Operator *</Label>
+                <Select value={formData.networkOperator} onValueChange={(value) => handleInputChange('networkOperator', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select department" />
                   </SelectTrigger>
@@ -315,7 +315,7 @@ export default function AddStationModal({ isOpen, onClose, onSuccess }: AddStati
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.governmentDepartment && <p className="text-sm text-destructive">{errors.governmentDepartment}</p>}
+                {errors.networkOperator && <p className="text-sm text-destructive">{errors.networkOperator}</p>}
               </div>
 
               <div>

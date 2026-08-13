@@ -364,11 +364,11 @@ export interface UserAnalytics {
 }
 
 // Government Charging Stations types
-export interface GovernmentChargingStation {
+export interface NetworkChargingStation {
   id: string;
   stationName: string;
   stationType: string;
-  governmentDepartment: string;
+  networkOperator: string;
   address: string;
   city: string;
   state: string;
@@ -435,7 +435,7 @@ export interface ImportResult {
     message: string;
     data: any;
   }>;
-  imported: GovernmentChargingStation[];
+  imported: NetworkChargingStation[];
 }
 
 export type GovernmentStationStatus = 'active' | 'maintenance' | 'inactive' | 'coming_soon';

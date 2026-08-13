@@ -57,10 +57,10 @@ const adminNavigation = [
     description: 'Manage charging locations'
   },
   {
-    title: 'Government Stations',
-    href: '/admin/government-stations',
+    title: 'Network Stations',
+    href: '/admin/network-stations',
     icon: Building,
-    description: 'Manage government charging infrastructure'
+    description: 'Manage network charging infrastructure'
   },
   {
     title: 'Requests',

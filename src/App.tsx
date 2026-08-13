@@ -46,7 +46,7 @@ const lazyAdminAnalytics = () => import("./pages/Admin/AdminAnalyticsPage");
 const lazyAdminPayouts = () => import("./pages/Admin/AdminPayoutsPage");
 const lazyAdminVerifications = () => import("./pages/Admin/AdminVerificationsPage");
 const lazyAdminListingReviews = () => import("./pages/Admin/AdminListingReviewsPage");
-const lazyAdminGovStations = () => import("./pages/Admin/AdminGovernmentStationsPage");
+const lazyAdminNetworkStations = () => import("./pages/Admin/AdminNetworkStationsPage");
 const lazyReferralAdmin = () => import("./pages/admin/ReferralAdmin");
 const lazyAdminHeatmap = () => import("./pages/admin/DemandHeatmap");
 const lazyAdminModeration = () => import("./pages/admin/AdminModerationPage");
@@ -164,7 +164,7 @@ function AppContent() {
           <Route index element={<LazyPage load={lazyAdminDashboard} />} />
           <Route path="users" element={<LazyPage load={lazyAdminUsers} />} />
           <Route path="spots" element={<LazyPage load={lazyAdminSpots} />} />
-          <Route path="government-stations" element={<LazyPage load={lazyAdminGovStations} />} />
+          <Route path="network-stations" element={<LazyPage load={lazyAdminNetworkStations} />} />
           <Route path="requests" element={<LazyPage load={lazyAdminRequests} />} />
           <Route path="analytics" element={<LazyPage load={lazyAdminAnalytics} />} />
           <Route path="payouts" element={<LazyPage load={lazyAdminPayouts} />} />

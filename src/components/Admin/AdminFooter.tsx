@@ -59,11 +59,11 @@ const AdminFooter: React.FC = () => {
                     User Management
                   </Link>
                   <Link
-                    to="/admin/government-stations"
+                    to="/admin/network-stations"
                     className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"
                   >
                     <Zap className="w-3 h-3" />
-                    Government Stations
+                    Network Stations
                   </Link>
                 </div>
               </div>
