@@ -95,6 +95,11 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    --electric: 217 86% 64%;
+    --electric-foreground: 0 0% 100%;
+    --ev-green: 142 64% 52%;
+    --ev-green-foreground: 0 0% 100%;
   }
 }
 

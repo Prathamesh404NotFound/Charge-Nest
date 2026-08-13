@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Circle, useMap, useMapEvents } from "r
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { getCityFallbackCoordinates } from "@/lib/hostRegistration";
+import { useTheme } from "@/lib/theme";
 
 // ─────────────────────────────────────────────────────────
 // Custom pin icon (matches the host registration modal)
@@ -121,6 +122,7 @@ export default function LocationPickerMap({
   showZoomControl = true,
   className = "",
 }: LocationPickerMapProps) {
+  const { isDark } = useTheme();
   // Determine map center and zoom level dynamically based on current values and fallbacks
   let center: [number, number] = [20.5937, 78.9629];
   let zoom = 5;
@@ -179,7 +181,11 @@ export default function LocationPickerMap({
         >
           <InvalidateSizeOnMount />
           <TileLayer
-            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+            url={
+              isDark
+                ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+            }
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
             subdomains="abcd"
             maxZoom={20}

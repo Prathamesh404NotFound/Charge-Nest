@@ -4,6 +4,7 @@ import type { Map as LeafletMap } from "leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { BadgeCheck, Loader2, Flag } from "lucide-react";
+import { useTheme } from "@/lib/theme";
 import {
   subscribeToAllAvailability,
   SpotAvailability,
@@ -149,6 +150,7 @@ export default function SpotsMap({
   destination = null,
   userLocationOverride = null,
 }: SpotsMapProps) {
+  const { isDark } = useTheme();
   const [userLocation, setUserLocation] = useState<{
     lat: number;
     lng: number;
@@ -251,7 +253,11 @@ export default function SpotsMap({
         )}
 
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+          url={
+            isDark
+              ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+          }
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
           subdomains="abcd"
           maxZoom={20}
