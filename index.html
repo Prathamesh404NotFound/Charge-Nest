@@ -6,8 +6,6 @@
     <title>VoltSetu - Find EV Two-Wheeler Charging Spots Near You in Kolhapur | Host & Earn</title>
 
     <!-- Resource Hints -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://basemaps.cartocdn.com" />
     <link rel="preconnect" href="https://nominatim.openstreetmap.org" />
     <link rel="dns-prefetch" href="https://charge-nest-default-rtdb.asia-southeast1.firebasedatabase.app" />
@@ -20,6 +18,31 @@
     <link rel="canonical" href="https://voltsetu.netlify.app/" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#3b82f6" />
+
+    <!-- Stale-bundle failsafe: an old index.html may reference chunks that no
+         longer exist on the server. Module errors and asset load errors
+         referencing /assets/ trigger one cache-busting reload. Max 2 reloads
+         per session to avoid loops. -->
+    <script>
+      (function () {
+        function vsrReload() {
+          var k = "vsr";
+          var n = Number(sessionStorage.getItem(k) || 0);
+          if (n < 2) {
+            sessionStorage.setItem(k, String(n + 1));
+            location.replace(location.origin + location.pathname + "?cb=" + Date.now());
+          }
+        }
+        window.addEventListener("error", function (e) {
+          var src = (e.target && (e.target.src || e.target.href || "")) || "";
+          if (/\/assets\//.test(src)) vsrReload();
+        }, true);
+        window.addEventListener("unhandledrejection", function (e) {
+          var msg = String((e.reason && (e.reason.message || e.reason.toString())) || "");
+          if (/\/assets\//.test(msg) && /failed to fetch|could not be found|import\(\)/i.test(msg)) vsrReload();
+        });
+      })();
+    </script>
 
     <!-- Dark-mode FOUC prevention: apply the stored theme BEFORE first paint -->
     <script>

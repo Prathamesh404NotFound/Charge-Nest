@@ -1,4 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+/* Fonts are self-hosted under /fonts/ (fonts-local.css). Google Fonts CSS
+ * rotates its woff2 file IDs over time, so browsers holding a cached CSS
+ * copy kept requesting retired IDs and got permanent 404s (the red
+ * "Failed to load resource" errors). Self-hosting removes that failure
+ * class entirely and loads fonts faster with no third-party dependency. */
+@import url('./fonts/fonts-local.css');
 
 @tailwind base;
 @tailwind components;
