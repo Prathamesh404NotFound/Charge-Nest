@@ -18,14 +18,26 @@
  *   last resort, kept under its own key "/index.html" so it can be validated)
  * - JS / CSS hashed chunks     : network-first with stale-while-revalidate —
  *   never serve a potentially stale bundle that could break the app
+ * 4. v3/v4 fix: the ENTRY bundle (assets/index-*.js referenced from
+ *    index.html) was being cached in the shell cache under its asset URL,
+ *    so a stale shell served a stale entry bundle forever (SyntaxError /
+ *    ReferenceError loops). The entry bundle is now excluded from caching
+ *    entirely, and v3 caches are purged on activate.
  * - Images                     : stale-while-revalidate
  * - Firebase / map tiles       : network-first, no caching (live data)
  */
-const CACHE_SHELL = "voltsetu-shell-v3";
+const CACHE_SHELL = "voltsetu-shell-v4";
 const CACHE_IMAGES = "voltsetu-images-v1";
 const MAX_IMAGE_CACHE = 80;
 
 const SHELL_URLS = ["/", "/index.html"];
+
+/* The entry bundle listed in index.html. Caching it under its asset URL
+ * caused stale-shell loops (the shell kept serving an old broken entry
+ * bundle). It is ALWAYS fetched fresh from the network. */
+function isEntryBundle(url) {
+  return /^\/assets\/index-[^.]+\.(js|mjs)(\?|$)/i.test(url);
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -45,7 +57,6 @@ self.addEventListener("activate", (event) => {
           keys
             .filter((key) => key.startsWith("voltsetu-") && key !== CACHE_SHELL && key !== CACHE_IMAGES)
             .map((key) => caches.delete(key))
-          )
         )
       ),
       // Purge any JS/CSS cache entries that contain HTML content (heal v1
@@ -151,13 +162,19 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          if (response.ok && !isViteDevRequest(request) && request.url.startsWith(self.location.origin)) {
+          if (response.ok && !isViteDevRequest(request) && request.url.startsWith(self.location.origin) && !isEntryBundle(request.url)) {
             caches.open(CACHE_SHELL).then((cache) => cache.put(request, response.clone()));
           }
           return response;
         })
         .catch(() => fallbackPage())
     );
+    return;
+  }
+
+  // Entry bundle: network-only. It must never be served from cache.
+  if (isEntryBundle(request.url)) {
+    event.respondWith(fetch(request).catch(() => responseFallback()));
     return;
   }
 
@@ -194,7 +211,7 @@ self.addEventListener("fetch", (event) => {
 
         const freshen = fetch(request)
           .then((response) => {
-            if (response.ok && request.url.startsWith(self.location.origin)) {
+            if (response.ok && request.url.startsWith(self.location.origin) && !isEntryBundle(request.url)) {
               caches.open(CACHE_SHELL).then((cache) => cache.put(request, response.clone()));
             }
             return response;
@@ -230,7 +247,7 @@ self.addEventListener("fetch", (event) => {
     caches.match(request).then((cached) => {
       const networked = fetch(request)
         .then((response) => {
-          if (response.ok && request.url.startsWith(self.location.origin)) {
+          if (response.ok && request.url.startsWith(self.location.origin) && !isEntryBundle(request.url)) {
             caches.open(CACHE_SHELL).then((cache) => cache.put(request, response.clone()));
           }
           return response;
