@@ -28,17 +28,20 @@ import {
 } from 'lucide-react';
 import { useAdminPermissions } from '@/hooks/useAdminAuth';
 import { ChargingSpot, SpotCategory, OutletType, ChargingSpeed, SpotStatus } from '@/types';
-import { adminCreateSpot } from '@/services/adminService';
+import { adminCreateSpot, adminUpdateSpot } from '@/services/adminService';
 import { adminGetAllUsers } from '@/services/adminService';
 import { validateForm, validationRules } from '@/lib/validation';
 import { LoadingSpinner } from '@/components/ui/loading-states';
 import FacilityPicker from '@/components/FacilityPicker';
-import { facilitiesToAmenities } from '@/lib/facilities';
+import { facilitiesToAmenities, amenitiesToFacilityIds } from '@/lib/facilities';
 
 interface AddSpotModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: (spot: ChargingSpot) => void;
+  /** When provided, the modal works in edit mode: the form is prefilled with
+   * the existing spot's data and changes are saved with adminUpdateSpot. */
+  editSpot?: ChargingSpot;
 }
 
 const SPOT_CATEGORIES: SpotCategory[] = [
@@ -131,8 +134,37 @@ export default function AddSpotModal({ isOpen, onClose, onSuccess }: AddSpotModa
   useEffect(() => {
     if (isOpen) {
       loadUsers();
+      if (editSpot) {
+        setFormData({
+          hostId: editSpot.hostId,
+          hostName: editSpot.hostName,
+          hostEmail: editSpot.hostEmail,
+          hostPhone: editSpot.hostPhone || '',
+          name: editSpot.name,
+          description: editSpot.description,
+          address: editSpot.address,
+          city: editSpot.city,
+          state: editSpot.state,
+          pincode: editSpot.pincode,
+          coordinates: {
+            lat: editSpot.coordinates?.lat ?? 0,
+            lng: editSpot.coordinates?.lng ?? 0,
+          },
+          category: editSpot.category,
+          outletType: editSpot.outletType,
+          chargingSpeed: editSpot.chargingSpeed,
+          availableHours: editSpot.availableHours,
+          pricePerHour: editSpot.pricePerHour,
+          pricePerMinute: editSpot.pricePerMinute,
+          facilities: amenitiesToFacilityIds(editSpot.amenities),
+        });
+        setCurrentStep(1);
+        setErrors({});
+      } else {
+        setFormData(defaultFormData);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, editSpot]);
 
   const loadUsers = async () => {
     try {
@@ -197,30 +229,54 @@ export default function AddSpotModal({ isOpen, onClose, onSuccess }: AddSpotModa
 
   const handleSubmit = async () => {
     if (!validateCurrentStep()) return;
-
     setIsSubmitting(true);
     try {
-      // Create spot
-      const spotData: Omit<ChargingSpot, 'id' | 'createdAt' | 'updatedAt'> = {
-        ...formData,
-        rating: 0,
-        reviews: [],
-        totalCharges: 0,
-        status: 'pending' as SpotStatus,
-        isVerified: false,
-        isFeatured: false,
-        photos: [],
-        amenities: facilitiesToAmenities(formData.facilities),
-      };
-
-      const createdSpot = await adminCreateSpot(spotData);
-
-      toast.success('Spot created successfully!');
-      onSuccess?.(createdSpot);
+      if (editSpot) {
+        // Edit mode: update only the fields from the form, preserving ratings,
+        // reviews, photos, counters and status.
+        await adminUpdateSpot(editSpot.id, {
+          hostId: formData.hostId,
+          hostName: formData.hostName,
+          hostEmail: formData.hostEmail,
+          hostPhone: formData.hostPhone,
+          name: formData.name,
+          description: formData.description,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          pincode: formData.pincode,
+          coordinates: formData.coordinates,
+          category: formData.category,
+          outletType: formData.outletType,
+          chargingSpeed: formData.chargingSpeed,
+          availableHours: formData.availableHours,
+          pricePerHour: formData.pricePerHour,
+          pricePerMinute: formData.pricePerMinute,
+          amenities: facilitiesToAmenities(formData.facilities),
+        });
+        toast.success('Spot updated successfully!');
+        onSuccess?.({ ...editSpot, ...formData, amenities: facilitiesToAmenities(formData.facilities) });
+      } else {
+        // Create spot
+        const spotData: Omit<ChargingSpot, 'id' | 'createdAt' | 'updatedAt'> = {
+          ...formData,
+          rating: 0,
+          reviews: [],
+          totalCharges: 0,
+          status: 'pending' as SpotStatus,
+          isVerified: false,
+          isFeatured: false,
+          photos: [],
+          amenities: facilitiesToAmenities(formData.facilities),
+        };
+        const createdSpot = await adminCreateSpot(spotData);
+        toast.success('Spot created successfully!');
+        onSuccess?.(createdSpot);
+      }
       handleClose();
     } catch (error) {
-      console.error('Error creating spot:', error);
-      toast.error('Failed to create spot');
+      console.error('Error saving spot:', error);
+      toast.error(editSpot ? 'Failed to update spot' : 'Failed to create spot');
     } finally {
       setIsSubmitting(false);
     }
@@ -233,6 +289,8 @@ export default function AddSpotModal({ isOpen, onClose, onSuccess }: AddSpotModa
     onClose();
   };
 
+  const isEditing = Boolean(editSpot);
+
   const renderStep = () => {
     switch (currentStep) {
       case 1:
@@ -244,19 +302,30 @@ export default function AddSpotModal({ isOpen, onClose, onSuccess }: AddSpotModa
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="hostId">Host *</Label>
-                  <Select value={formData.hostId} onValueChange={(value) => handleInputChange('hostId', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a host" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {users.map(user => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.displayName} ({user.email})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.hostId && <p className="text-sm text-destructive">{errors.hostId}</p>}
+                  {isEditing ? (
+                    <div className="flex items-center justify-between border rounded-md px-3 py-2 bg-muted/40">
+                      <span className="text-sm font-medium">
+                        {editSpot!.hostName} ({editSpot!.hostEmail})
+                      </span>
+                      <span className="text-xs text-muted-foreground">Host can't be changed</span>
+                    </div>
+                  ) : (
+                    <>
+                      <Select value={formData.hostId} onValueChange={(value) => handleInputChange('hostId', value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a host" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {users.map(user => (
+                            <SelectItem key={user.id} value={user.id}>
+                              {user.displayName} ({user.email})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors.hostId && <p className="text-sm text-destructive">{errors.hostId}</p>}
+                    </>
+                  )}
                 </div>
 
                 <div>
@@ -526,7 +595,7 @@ export default function AddSpotModal({ isOpen, onClose, onSuccess }: AddSpotModa
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add New Charging Spot</DialogTitle>
+          <DialogTitle>{isEditing ? `Edit Spot: ${editSpot!.name}` : 'Add New Charging Spot'}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -561,10 +630,10 @@ export default function AddSpotModal({ isOpen, onClose, onSuccess }: AddSpotModa
                 {isSubmitting ? (
                   <>
                     <LoadingSpinner size="sm" className="mr-2" />
-                    Creating...
+                    {isEditing ? 'Updating...' : 'Creating...'}
                   </>
                 ) : (
-                  'Create Spot'
+                  isEditing ? 'Update Spot' : 'Create Spot'
                 )}
               </Button>
             ) : (

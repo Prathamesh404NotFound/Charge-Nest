@@ -25,6 +25,8 @@ import {
 import { useAdminPermissions } from '@/hooks/useAdminAuth';
 import { ChargingSpot } from '@/types';
 import AddSpotModal from '@/components/Admin/AddSpotModal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Badge as StatusBadge } from '@/components/ui/badge';
 import {
   Table,
   TableBody,
@@ -76,6 +78,8 @@ const AdminSpotsPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | ChargingSpot['status']>('all');
   const [error, setError] = useState<string>('');
   const [addSpotModalOpen, setAddSpotModalOpen] = useState(false);
+  const [editSpot, setEditSpot] = useState<ChargingSpot | null>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
@@ -146,11 +150,13 @@ const AdminSpotsPage: React.FC = () => {
       setActionLoading(true);
       setError('');
       await adminDeleteSpot(selectedSpot.id);
-      setSpots(spots.filter(s => s.id !== selectedSpot.id));
+      setSpots(prev => prev.filter(s => s.id !== selectedSpot.id));
       setDeleteDialogOpen(false);
       setSelectedSpot(null);
+      toast.success(`"${selectedSpot.name}" has been deleted.`);
     } catch (error) {
       console.error('Error deleting spot:', error);
+      toast.error('Failed to delete the charging spot. Please try again.');
       setError(error instanceof Error ? error.message : 'Failed to delete charging spot');
     } finally {
       setActionLoading(false);
@@ -167,12 +173,30 @@ const AdminSpotsPage: React.FC = () => {
       setSpots(spots.map(spot =>
         spot.id === spotId ? { ...spot, status: newStatus } : spot
       ));
+      toast.success(`Spot is now ${newStatus}.`);
     } catch (error) {
       console.error('Error updating spot status:', error);
+      toast.error('Failed to update spot status. Please try again.');
       setError(error instanceof Error ? error.message : 'Failed to update spot status');
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const handleOpenEdit = (spot: ChargingSpot) => {
+    setEditSpot(spot);
+    setAddSpotModalOpen(true);
+  };
+
+  const handleOpenDetails = (spot: ChargingSpot) => {
+    setSelectedSpot(spot);
+    setDetailDialogOpen(true);
+  };
+
+  const handleSpotEdited = (updated: ChargingSpot) => {
+    setSpots(prev => prev.map(s => (s.id === updated.id ? updated : s)));
+    setEditSpot(null);
+    setAddSpotModalOpen(false);
   };
 
   const getStatusBadgeColor = (status: ChargingSpot['status']) => {
@@ -434,13 +458,13 @@ const AdminSpotsPage: React.FC = () => {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleOpenDetails(spot)}>
                                 <Eye className="w-4 h-4 mr-2" />
                                 View Details
                               </DropdownMenuItem>
                               {canEditSpots && (
                                 <>
-                                  <DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleOpenEdit(spot)}>
                                     <Edit className="w-4 h-4 mr-2" />
                                     Edit Spot
                                   </DropdownMenuItem>
@@ -515,15 +539,130 @@ const AdminSpotsPage: React.FC = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Add Spot Modal */}
+      {/* Spot Details Dialog */}
+      <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedSpot?.name ?? 'Charging Spot'}
+              {selectedSpot?.status && (
+                <Badge className={getStatusBadgeColor(selectedSpot.status)}>
+                  {selectedSpot.status}
+                </Badge>
+              )}
+            </DialogTitle>
+            {selectedSpot?.description && (
+              <DialogDescription className="text-sm">{selectedSpot.description}</DialogDescription>
+            )}
+          </DialogHeader>
+
+          {selectedSpot && (
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <DetailItem icon={MapPin} label="Address" value={`${selectedSpot.address}, ${selectedSpot.city}, ${selectedSpot.state} - ${selectedSpot.pincode}`} />
+                <DetailItem
+                  icon={MapPin}
+                  label="Coordinates"
+                  value={`Lat ${selectedSpot.coordinates?.lat?.toFixed(5) ?? '—'}, Lng ${selectedSpot.coordinates?.lng?.toFixed(5) ?? '—'}`}
+                />
+                <DetailItem icon={Zap} label="Outlet Type" value={selectedSpot.outletType?.replace('_', ' ').toUpperCase() ?? '—'} />
+                <DetailItem icon={Zap} label="Charging Speed" value={selectedSpot.chargingSpeed?.toUpperCase() ?? '—'} />
+                <DetailItem icon={Clock} label="Available Hours" value={selectedSpot.availableHours || '—'} />
+                <DetailItem icon={ImageIcon} label="Category" value={selectedSpot.category?.replace('_', ' ').toUpperCase() ?? '—'} />
+                <DetailItem icon={Zap} label="Price per Hour" value={formatCurrency(selectedSpot.pricePerHour || 0)} />
+                {selectedSpot.pricePerMinute ? (
+                  <DetailItem icon={Zap} label="Price per Minute" value={formatCurrency(selectedSpot.pricePerMinute)} />
+                ) : (
+                  <DetailItem icon={Zap} label="Price per Minute" value="—" />
+                )}
+              </div>
+
+              {selectedSpot.amenities?.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium mb-2">Facilities</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedSpot.amenities
+                      .filter(a => a.available)
+                      .map(a => (
+                        <StatusBadge key={a.id} variant="secondary" className="text-xs">
+                          {a.name}
+                        </StatusBadge>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-muted/40 rounded-lg p-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Rating</p>
+                  <p className="font-semibold flex items-center gap-1">
+                    <Star className="w-4 h-4 text-yellow-500 fill-current" /> {selectedSpot.rating.toFixed(1)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Reviews</p>
+                  <p className="font-semibold">{selectedSpot.reviews ? selectedSpot.reviews.length : 0}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Total Charges</p>
+                  <p className="font-semibold">{selectedSpot.totalCharges ?? 0}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Verified</p>
+                  <p className="font-semibold">{selectedSpot.isVerified ? 'Yes' : 'No'}</p>
+                </div>
+              </div>
+
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p><strong>Host:</strong> {selectedSpot.hostName} ({selectedSpot.hostEmail}){selectedSpot.hostPhone ? ` · ${selectedSpot.hostPhone}` : ''}</p>
+                {selectedSpot.googleMapsLink && (
+                  <a href={selectedSpot.googleMapsLink} target="_blank" rel="noopener noreferrer" className="text-primary underline break-all">
+                    Open in Google Maps
+                  </a>
+                )}
+                <p>
+                  <strong>Created:</strong> {selectedSpot.createdAt ? formatDate(selectedSpot.createdAt) : '—'} · <strong>Updated:</strong> {selectedSpot.updatedAt ? formatDate(selectedSpot.updatedAt) : '—'}
+                </p>
+              </div>
+
+              {selectedSpot.photos?.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium mb-2">Photos ({selectedSpot.photos.length})</p>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {selectedSpot.photos.map((url, i) => (
+                      <img key={i} src={url} alt={`${selectedSpot.name} photo ${i + 1}`} className="w-full h-20 object-cover rounded-md" />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add / Edit Spot Modal */}
       <AddSpotModal
         isOpen={addSpotModalOpen}
-        onClose={() => setAddSpotModalOpen(false)}
-        onSuccess={handleSpotCreated}
+        onClose={() => {
+          setAddSpotModalOpen(false);
+          setEditSpot(null);
+        }}
+        onSuccess={editSpot ? handleSpotEdited : handleSpotCreated}
+        editSpot={editSpot ?? undefined}
       />
       </div>
     </ResponsiveContainer>
   );
 };
+
+const DetailItem: React.FC<{ icon: any; label: string; value: string }> = ({ icon: Icon, label, value }) => (
+  <div className="flex items-start gap-2">
+    <Icon className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+    <div className="min-w-0">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="text-sm font-medium break-words">{value}</p>
+    </div>
+  </div>
+);
 
 export default AdminSpotsPage;

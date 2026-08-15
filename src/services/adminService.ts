@@ -195,6 +195,24 @@ export const adminCreateSpot = async (spotData: Omit<ChargingSpot, 'id' | 'creat
   }
 };
 
+/** Update all editable fields of an existing charging spot. Merges on top of the
+ * current record so ratings, reviews, photos and counters are preserved. */
+export const adminUpdateSpot = async (
+  spotId: string,
+  spotData: Partial<ChargingSpot>
+): Promise<void> => {
+  try {
+    const spotRef = ref(database, `chargingSpots/${spotId}`);
+    await update(spotRef, {
+      ...spotData,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error('Error updating spot:', error);
+    throw new Error('Failed to update charging spot');
+  }
+};
+
 export const adminUploadSpotImages = async (spotId: string, files: File[]): Promise<string[]> => {
   try {
     const uploadPromises = files.map(async (file, index) => {

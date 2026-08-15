@@ -96,3 +96,17 @@ export function facilitiesToAmenities(ids: string[]): Amenity[] {
 export function getFacility(id: string): Facility | undefined {
   return FACILITIES.find((f) => f.id === id);
 }
+
+/** Reverse mapping: convert Amenity[] (as stored on spots) back to facility ids.
+ * Matches on the amenity id when it is a known facility id. */
+export function amenitiesToFacilityIds(amenities: { id?: string; name?: string }[] | undefined): string[] {
+  if (!amenities || !Array.isArray(amenities)) return [];
+  const allowed = new Set(FACILITIES.map((f) => f.id));
+  const ids: string[] = [];
+  for (const a of amenities) {
+    if (a && a.id && allowed.has(a.id)) {
+      ids.push(a.id);
+    }
+  }
+  return ids.filter((v, i, arr) => arr.indexOf(v) === i);
+}
