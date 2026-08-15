@@ -120,7 +120,7 @@ const defaultFormData: SpotFormData = {
   facilities: []
 };
 
-export default function AddSpotModal({ isOpen, onClose, onSuccess }: AddSpotModalProps) {
+export default function AddSpotModal({ isOpen, onClose, onSuccess, editSpot }: AddSpotModalProps) {
   const { canEditSpots } = useAdminPermissions();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<SpotFormData>(defaultFormData);
