@@ -24,7 +24,8 @@ import {
   ClipboardList,
   Ticket,
   Activity,
-  Flag
+  Flag,
+  BellRing
 } from 'lucide-react';
 import { useAuth } from '@/components/Auth/AuthProvider';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -121,6 +122,12 @@ const adminNavigation = [
     href: '/admin/notifications',
     icon: Bell,
     description: 'Inbox: new flags, pending reviews, verifications'
+  },
+  {
+    title: 'City Waitlist',
+    href: '/admin/city-waitlist',
+    icon: BellRing,
+    description: 'Upcoming-city rider & host signups'
   },
 ];
 
