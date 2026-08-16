@@ -14,6 +14,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { get, push, ref, serverTimestamp, update, set } from "firebase/database";
+import { Checkbox } from "@/components/ui/checkbox";
 import { database } from "@/lib/firebase-services";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -85,6 +86,9 @@ export default function AdminPayoutsPage() {
   const [requests, setRequests] = useState<PayoutRequestRow[]>([]);
   const [filter, setFilter] = useState<"all" | "due" | "cleared">("all");
   const [decidingId, setDecidingId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkNote, setBulkNote] = useState("");
+  const [bulkDeciding, setBulkDeciding] = useState(false);
 
   async function loadData() {
     setLoading(true);
@@ -258,6 +262,66 @@ export default function AdminPayoutsPage() {
     (r) => r.status === "paid" || r.status === "rejected"
   );
 
+  const allSelected =
+    activeRequests.length > 0 && activeRequests.every((r) => selectedIds.has(r.id));
+
+  function toggleAll(selected: boolean) {
+    setSelectedIds(
+      selected ? new Set(activeRequests.map((r) => r.id)) : new Set()
+    );
+  }
+
+  function toggleOne(id: string, selected: boolean) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (selected) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  async function bulkDecide(decision: "paid" | "rejected") {
+    const ids = [...selectedIds].filter((id) =>
+      activeRequests.some((r) => r.id === id)
+    );
+    if (ids.length === 0) {
+      toast.warning("Select at least one payout request first.");
+      return;
+    }
+    if (decision === "rejected" && !bulkNote.trim()) {
+      toast.warning("Add one shared rejection note so every host sees what went wrong.");
+      return;
+    }
+    setBulkDeciding(true);
+    let ok = 0;
+    for (const id of ids) {
+      const req = activeRequests.find((r) => r.id === id);
+      if (!req || !req.hostId) continue;
+      try {
+        await decidePayoutRequest(
+          req.hostId,
+          req.id,
+          decision,
+          decision === "paid"
+            ? "Approved via VoltSetu admin payout queue (bulk)"
+            : bulkNote.trim()
+        );
+        ok += 1;
+      } catch {
+        toast.error(`Could not process request from ${req.hostName}`);
+      }
+    }
+    toast.success(
+      decision === "paid"
+        ? `Approved ${ok} payout request${ok === 1 ? "" : "s"}`
+        : `Rejected ${ok} payout request${ok === 1 ? "" : "s"}`
+    );
+    setBulkNote("");
+    setSelectedIds(new Set());
+    setBulkDeciding(false);
+    await loadData();
+  }
+
   async function markPaid(hostId: string, hostName: string, amount: number) {
     if (amount <= 0) {
       toast.error("Nothing due for this host right now.");
@@ -392,8 +456,55 @@ export default function AdminPayoutsPage() {
           </p>
         ) : (
           <div className="mt-4 space-y-3">
+            {/* Bulk action toolbar */}
+            <div className="flex flex-wrap items-center gap-2 rounded-xl bg-muted/50 p-3">
+              <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <Checkbox
+                  checked={allSelected}
+                  onCheckedChange={(v) => toggleAll(v === true)}
+                  aria-label="Select all payout requests"
+                />
+                Select all
+              </label>
+              <span className="text-xs text-muted-foreground">
+                {selectedIds.size} selected
+              </span>
+              <div className="ml-auto flex flex-wrap items-center gap-2">
+                <input
+                  value={bulkNote}
+                  onChange={(e) => setBulkNote(e.target.value.slice(0, 200))}
+                  placeholder="Shared rejection note…"
+                  maxLength={200}
+                  className="rounded-lg border border-input bg-background px-2.5 py-1.5 text-xs w-56 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+                <Button
+                  size="sm"
+                  className="gap-1.5 bg-ev-green hover:bg-ev-green/90 text-white"
+                  disabled={bulkDeciding || selectedIds.size === 0}
+                  onClick={() => bulkDecide("paid")}
+                >
+                  {bulkDeciding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                  Approve {selectedIds.size > 0 ? `${selectedIds.size}` : ""}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 text-destructive border-destructive/40 hover:bg-destructive/10"
+                  disabled={bulkDeciding || selectedIds.size === 0}
+                  onClick={() => bulkDecide("rejected")}
+                >
+                  {bulkDeciding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
+                  Reject {selectedIds.size > 0 ? `${selectedIds.size}` : ""}
+                </Button>
+              </div>
+            </div>
             {activeRequests.map((req) => (
               <div key={req.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-background p-4">
+                <Checkbox
+                  checked={selectedIds.has(req.id)}
+                  onCheckedChange={(v) => toggleOne(req.id, v === true)}
+                  aria-label={`Select payout request from ${req.hostName}`}
+                />
                 <div className="min-w-40 flex-1">
                   <p className="text-sm font-semibold text-foreground">{req.hostName}</p>
                   <p className="text-xs text-muted-foreground">
