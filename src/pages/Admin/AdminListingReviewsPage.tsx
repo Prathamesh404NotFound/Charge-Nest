@@ -27,7 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/components/Auth/AuthProvider";
 import FacilitiesChips from "@/components/FacilitiesChips";
-import AdminLayoutPage from "@/components/Admin/AdminLayoutPage";
+import ResponsiveContainer from "@/components/ui/responsive-container";
 import {
   getAllListingReviews,
   decideListingReview,
@@ -155,7 +155,20 @@ export default function AdminListingReviewsPage() {
   const bulkCount = [...selectedIds].filter((id) => pendingIds.includes(id)).length;
 
   return (
-    <AdminLayoutPage title="Listing Reviews" subtitle="Quality control — approve or reject new spot listings before they go live">
+    <ResponsiveContainer size="xl" className="py-6">
+      {/* Page header (the outer AdminLayoutPage already provides the admin shell) */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Listing Reviews</h1>
+          <p className="text-muted-foreground">Quality control — approve or reject new spot listings before they go live</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => void fetchReviews()} disabled={loading} aria-label="Refresh reviews">
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+        </div>
+      </div>
       <div className="space-y-6">
         {/* Queue stats strip */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -421,6 +434,6 @@ export default function AdminListingReviewsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </AdminLayoutPage>
+    </ResponsiveContainer>
   );
 }
