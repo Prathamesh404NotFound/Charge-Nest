@@ -48,6 +48,8 @@ export default function FindSpots() {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationLoading, setLocationLoading] = useState(true);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [manualLat, setManualLat] = useState("");
+  const [manualLng, setManualLng] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
 
   // Route mode state
@@ -84,7 +86,11 @@ export default function FindSpots() {
       navigator.geolocation.getCurrentPosition(
         applyPosition,
         (err) => {
-          console.error(err);
+          // Permission denied / position unavailable is a user choice, not a bug —
+          // log it quietly and degrade gracefully instead of spamming the console.
+          if (err.code !== err.PERMISSION_DENIED) {
+            console.error(err);
+          }
           setLocationError(err.message);
           setLocationLoading(false);
         }
@@ -103,8 +109,11 @@ export default function FindSpots() {
         });
         applyPosition(position);
       } catch (err: any) {
-        console.error(err);
-        setLocationError(err.message || "Native location error");
+        const msg = err?.message || "Native location error";
+        if (!String(msg).toLowerCase().includes("denied")) {
+          console.error(err);
+        }
+        setLocationError(msg);
         setLocationLoading(false);
       }
     };
@@ -493,13 +502,55 @@ export default function FindSpots() {
               )}
 
               {!locationLoading && !userLocation && (
-                <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-3 text-sm text-amber-900 dark:text-amber-100">
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>
-                    {locationError
-                      ? `Location unavailable (${locationError}). Enable location access to draw a route from where you are.`
-                      : "Enable location access to draw a route from where you are."}
-                  </span>
+                <div className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-3 text-sm text-amber-900 dark:text-amber-100">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>
+                      {locationError
+                        ? `Location unavailable (${locationError}). Enable location access to draw a route from where you are.`
+                        : "Enable location access to draw a route from where you are."}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const lat = parseFloat(manualLat);
+                        const lng = parseFloat(manualLng);
+                        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                          toast.error("Please enter valid coordinates, e.g. 16.7050, 74.2433");
+                          return;
+                        }
+                        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                          toast.error("Latitude must be between -90 and 90, longitude between -180 and 180");
+                          return;
+                        }
+                        setUserLocation({ lat, lng });
+                        setLocationError(null);
+                        toast.success("Starting point set — spots will be shown relative to it");
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/50 px-3 py-1.5 font-medium text-amber-900 dark:text-amber-100 hover:bg-amber-200 dark:hover:bg-amber-800/50 transition-colors"
+                    >
+                      <MapPin className="w-3.5 h-3.5" />
+                      Set starting point by coordinates
+                    </button>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="Latitude, e.g. 16.7050"
+                      value={manualLat}
+                      onChange={(e) => setManualLat(e.target.value)}
+                      className="w-40 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="Longitude, e.g. 74.2433"
+                      value={manualLng}
+                      onChange={(e) => setManualLng(e.target.value)}
+                      className="w-40 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
                 </div>
               )}
 
