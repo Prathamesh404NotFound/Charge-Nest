@@ -53,6 +53,7 @@ const lazyAdminModeration = () => import("./pages/admin/AdminModerationPage");
 const lazyAdminNotifications = () => import("./pages/admin/AdminNotificationsPage");
 const lazyAdminCityWaitlist = () => import("./pages/Admin/AdminCityWaitlistPage");
 const lazyLoyalty = () => import("./pages/Loyalty");
+const lazyTripPlanner = () => import("./pages/TripPlannerPage");
 const lazyHostProfile = () => import("./pages/HostProfile");
 
 const queryClient = new QueryClient();
@@ -106,8 +107,8 @@ function AppContent() {
         <Route path="/kolhapur" element={<Navigate to="/city/kolhapur" replace />} />
         <Route path="/city/:slug" element={<LazyPage load={lazyCityPage} />} />
         <Route path="/rescue" element={<LazyPage load={lazyEmergencyRescue} />} />
-        {/* /route kept as a redirect so saved bookmarks still reach the planner via the profile menu */}
-        <Route path="/route" element={<Navigate to="/about-contact" replace />} />
+
+        <Route path="/route" element={<LazyPage load={lazyTripPlanner} />} />
         {/* Trip Planner moved into the profile menu to keep the nav lean */}
         <Route path="/about-contact" element={<LazyPage load={lazyAboutContact} />} />
         <Route path="/about" element={<Navigate to="/about-contact" replace />} />
