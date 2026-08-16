@@ -1,18 +1,23 @@
 /**
- * Roadside Rescue — emergency stranded-rider mode.
+ * Roadside Rescue — emergency stranded-rider mode (Round 40 upgrade).
  *
- * Full-bleed urgent UI: auto geolocation → nearest open spots ranked by
- * haversine distance → one-tap "Rescue Me" booking (45-min slot, rescuer
- * message, pay-at-spot on arrival) → direct host call/WhatsApp.
+ * Full-bleed urgent UI: auto geolocation → battery-level range filter →
+ * nearest open (non-paused) spots ranked by haversine → mini map of the
+ * rescue corridor → one-tap "Rescue Me" booking → direct host call/WhatsApp.
  *
- * Designed for panic moments: huge touch targets, countdown timer for the
- * battery "window", zero scroll required for the primary action.
+ * Designed for panic moments: huge touch targets, battery window countdown,
+ * primary action visible without scrolling, safety tips + national emergency
+ * number always reachable.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import {
   BatteryWarning,
+  Battery,
   MapPin,
   Phone,
   MessageCircle,
@@ -23,17 +28,27 @@ import {
   X,
   Navigation,
   AlertTriangle,
+  LifeBuoy,
+  PhoneCall,
 } from "lucide-react";
 import { useAuth } from "@/components/Auth/AuthProvider";
 import { getAllChargingSpots } from "@/lib/hostRegistration";
-import { getAllNetworkStations, mergeNetworkStations } from "@/lib/networkStationsService";import {
+import { getAllNetworkStations, mergeNetworkStations } from "@/lib/networkStationsService";
+import {
   resolveRiderPosition,
   rankSpotsByDistance,
   RESCUE_WINDOW_MINUTES,
   type RescueSpot,
 } from "@/lib/rescueService";
+import { getHostSettings, isHostPaused } from "@/lib/hostSettingsService";
+import { getActiveCities, type CityInfo } from "@/lib/cities";
 import { submitEmergencyBooking } from "@/lib/bookingService";
 import type { ChargingSpot } from "@/types";
+
+/** Approximate range (km) a two-wheeler can travel per 10% battery left. */
+const KM_PER_10_PERCENT = 8;
+
+const BATTERY_LEVELS = [5, 10, 20, 30, 40] as const;
 
 function useCountdown(seconds: number) {
   const [left, setLeft] = useState(seconds);
@@ -47,13 +62,50 @@ function useCountdown(seconds: number) {
   return `${mm}:${ss}`;
 }
 
+// ── Red SOS-style icons for the rescue map ──────────────────────────
+const rescueMarkerIcon = (rank: number) =>
+  L.divIcon({
+    className: "rescue-map-marker",
+    html: `
+      <div style="width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);
+                background:hsl(0,84%,55%);border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,.3);
+                display:flex;align-items:flex-start;justify-content:flex-start;padding-left:5px;padding-top:1px;">
+        <span style="transform:rotate(45deg);color:white;font-size:10px;font-weight:800;font-family:Space Grotesk,sans-serif;">${rank}</span>
+      </div>
+    `,
+    iconSize: [26, 26],
+    iconAnchor: [13, 26],
+    popupAnchor: [0, -26],
+  });
+
+const userDotIcon = L.divIcon({
+  className: "rescue-user-dot",
+  html: `
+    <div style="position:relative;width:26px;height:26px;">
+      <style>
+        @keyframes rescue-pulse{0%{transform:scale(.6);opacity:.8}100%{transform:scale(2.6);opacity:0}}
+      </style>
+      <div style="position:absolute;width:26px;height:26px;background:hsl(0,84%,55%);border-radius:50%;
+                  opacity:.4;animation:rescue-pulse 1.6s infinite ease-out;"></div>
+      <div style="position:absolute;top:6px;left:6px;width:14px;height:14px;
+                  background:hsl(0,84%,55%);border:2px solid white;border-radius:50%;
+                  box-shadow:0 2px 5px rgba(0,0,0,.3);"></div>
+    </div>
+  `,
+  iconSize: [26, 26],
+  iconAnchor: [13, 13],
+});
+
 export default function EmergencyRescue() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [stage, setStage] = useState<"locating" | "ready" | "booking">("locating");
   const [source, setSource] = useState<"gps" | "city">("gps");
   const [error, setError] = useState<string | null>(null);
-  const [spots, setSpots] = useState<RescueSpot[]>([]);
+  const [allSpots, setAllSpots] = useState<RescueSpot[]>([]);
+  const [battery, setBattery] = useState<number | null>(null);
+  const [city, setCity] = useState<CityInfo | null>(null);
+  const [manualCity, setManualCity] = useState(false);
   const [bookingSpot, setBookingSpot] = useState<RescueSpot | null>(null);
   const [done, setDone] = useState<RescueSpot | null>(null);
   const timerRef = useRef<number>(0);
@@ -72,11 +124,26 @@ export default function EmergencyRescue() {
         if (cancelled) return;
         setSource(pos.source);
         if (pos.error) setError(pos.error);
+        if (pos.source === "city") {
+          setManualCity(true);
+          const found = getActiveCities().find(
+            (c) => Math.abs(c.lat - pos.lat) < 0.01 && Math.abs(c.lng - pos.lng) < 0.01
+          );
+          if (found) setCity(found);
+        }
         const all = await getAllChargingSpots();
         const net = await getAllNetworkStations();
         if (cancelled) return;
-        const ranked = rankSpotsByDistance(mergeNetworkStations(all, net), pos.lat, pos.lng);
-        setSpots(ranked);
+        const merged = mergeNetworkStations(all, net);
+        // Exclude holiday-paused hosts (Round 34 settings layer)
+        const hostIds = Array.from(new Set(merged.map((s: any) => s.hostId).filter(Boolean)));
+        const settings = await Promise.all(hostIds.map(getHostSettings));
+        const settingsByHost = Object.fromEntries(hostIds.map((h, i) => [h, settings[i]]));
+        const filtered = merged.filter(
+          (s: any) => !isHostPaused(settingsByHost[s.hostId ?? ""] ?? null)
+        );
+        const ranked = rankSpotsByDistance(filtered, pos.lat, pos.lng);
+        setAllSpots(ranked);
         setStage("ready");
       } catch (err) {
         if (cancelled) return;
@@ -84,10 +151,26 @@ export default function EmergencyRescue() {
         setStage("ready");
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [loading]);
 
-  const nearest = useMemo(() => spots.slice(0, 3), [spots]);
+  const rangeKm = battery ? (battery / 10) * KM_PER_10_PERCENT : null;
+
+  const nearest = useMemo(() => {
+    const list = rangeKm
+      ? allSpots.filter((s) => Number.isFinite(s.distanceKm) && s.distanceKm <= rangeKm)
+      : allSpots;
+    return list.slice(0, 3);
+  }, [allSpots, rangeKm]);
+
+  const mapSpots = useMemo(() => nearest, [nearest]);
+
+  const userPos = useMemo(() => {
+    const pos = source === "gps" ? null : null;
+    return pos;
+  }, [source]);
 
   const handleRescue = async (rescue: RescueSpot) => {
     if (!user) {
@@ -152,21 +235,91 @@ export default function EmergencyRescue() {
               <span className="font-semibold text-neutral-200">open right now</span>. Tap Rescue Me — your host gets a
               pending request instantly.
             </p>
+            {/* National emergency fallback */}
+            <a
+              href="tel:112"
+              className="mt-3 flex items-center justify-center gap-2 rounded-xl border border-red-800/60 bg-red-950/30 px-4 py-2.5 text-sm font-semibold text-red-300 transition-colors hover:bg-red-950/60"
+            >
+              <PhoneCall className="h-4 w-4" /> In grave danger? Call 112 (National Emergency)
+            </a>
           </div>
 
-          {/* Location status */}
-          <div className="mb-4 flex items-center gap-2 text-sm text-neutral-400">
+          {/* Location status + manual city picker */}
+          <div className="mb-4 flex flex-wrap items-center gap-2 text-sm text-neutral-400">
             <MapPin className="h-4 w-4 text-red-400" />
             {stage === "locating" ? (
               <span>Locating you…</span>
             ) : (
               <span>
-                {source === "gps" ? "Using your location" : "Location unavailable — showing launch city"}
+                {source === "gps" ? "Using your location" : "Location unavailable — pick your city"}
                 {error ? ` (${error})` : ""}
               </span>
             )}
             {stage === "locating" && <Loader2 className="h-4 w-4 animate-spin text-red-400" />}
           </div>
+
+          {manualCity && stage === "ready" && (
+            <div className="mb-4 flex flex-wrap gap-2">
+              {getActiveCities().map((c) => (
+                <button
+                  key={c.slug}
+                  onClick={() => setCity(c)}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    city?.slug === c.slug
+                      ? "border-red-600 bg-red-600/20 text-red-300"
+                      : "border-neutral-800 text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
+                  }`}
+                >
+                  {c.name}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Battery level selector */}
+          {stage === "ready" && (
+            <div className="mb-5 rounded-2xl border border-neutral-800 bg-neutral-950/60 p-4">
+              <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-neutral-200">
+                <Battery className="h-4 w-4 text-red-400" />
+                How much battery is left?
+                <span className="text-xs font-normal text-neutral-500">(we'll only show spots within reach)</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {BATTERY_LEVELS.map((pct) => {
+                  const km = Math.round((pct / 10) * KM_PER_10_PERCENT);
+                  return (
+                    <button
+                      key={pct}
+                      onClick={() => setBattery(pct)}
+                      className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition-all ${
+                        battery === pct
+                          ? "border-red-600 bg-red-600/20 text-red-300"
+                          : "border-neutral-800 text-neutral-300 hover:border-neutral-600"
+                      }`}
+                    >
+                      <span>{pct}%</span>
+                      <span className="text-xs font-normal text-neutral-500">≈ {km} km</span>
+                    </button>
+                  );
+                })}
+                {battery !== null && (
+                  <button
+                    onClick={() => setBattery(null)}
+                    className="flex items-center gap-1 rounded-xl border border-neutral-800 px-3 py-2 text-xs text-neutral-500 hover:text-neutral-300"
+                  >
+                    <X className="h-3 w-3" /> clear
+                  </button>
+                )}
+              </div>
+              {battery !== null && (
+                <p className="mt-3 text-xs text-neutral-500">
+                  Showing only spots within ~{Math.round(rangeKm ?? 0)} km.{" "}
+                  {allSpots.filter((s) => Number.isFinite(s.distanceKm) && s.distanceKm <= (rangeKm ?? 0)).length} of{" "}
+                  {allSpots.length} open spots in reach.
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Results */}
           {stage === "locating" && (
@@ -181,8 +334,9 @@ export default function EmergencyRescue() {
               <BatteryWarning className="mx-auto mb-3 h-10 w-10 text-red-500/60" />
               <p className="mb-1 font-semibold">No open spots nearby right now</p>
               <p className="mb-4 text-sm text-neutral-400">
-                Every open outlet is booked or closed for the hour. Call a host directly — hosts on VoltSetu often make
-                exceptions for stranded riders.
+                {battery
+                  ? "No open spot fits within your battery range. Raise the battery level or widen your search."
+                  : "Every open outlet is booked or closed for the hour. Call a host directly — hosts on VoltSetu often make exceptions for stranded riders."}
               </p>
               <a
                 href="/spots"
@@ -190,6 +344,46 @@ export default function EmergencyRescue() {
               >
                 <Zap className="h-4 w-4" /> View all spots
               </a>
+            </div>
+          )}
+
+          {/* Mini map of the rescue corridor */}
+          {stage === "ready" && mapSpots.length >= 2 && (
+            <div className="mb-5 overflow-hidden rounded-2xl border border-neutral-800">
+              <MapContainer
+                center={[
+                  mapSpots[0].spot.coordinates?.lat ?? city?.lat ?? 0,
+                  mapSpots[0].spot.coordinates?.lng ?? city?.lng ?? 0,
+                ]}
+                zoom={13}
+                style={{ height: 220, width: "100%" }}
+                className="z-0"
+              >
+                <TileLayer
+                  url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
+                />
+                {mapSpots.map((r, i) => {
+                  const lat = r.spot.coordinates?.lat;
+                  const lng = r.spot.coordinates?.lng;
+                  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+                  return (
+                    <Marker key={r.spot.id} position={[lat, lng]} icon={rescueMarkerIcon(i + 1)}>
+                      <Popup>
+                        <strong>{r.spot.name}</strong>
+                        <br />
+                        {r.distanceLabel}
+                      </Popup>
+                    </Marker>
+                  );
+                })}
+                {mapSpots[0]?.spot.coordinates && (
+                  <Marker
+                    position={[mapSpots[0].spot.coordinates.lat, mapSpots[0].spot.coordinates.lng]}
+                    icon={userDotIcon}
+                  />
+                )}
+              </MapContainer>
             </div>
           )}
 
@@ -280,13 +474,29 @@ export default function EmergencyRescue() {
           ))}
 
           {/* Remaining ranked list */}
-          {spots.length > 3 && (
+          {allSpots.length > 3 && (
             <p className="mt-2 mb-4 text-center text-sm text-neutral-500">
-              +{spots.length - 3} more open spots —{" "}
+              +{Math.max(0, allSpots.length - 3)} more open spots —{" "}
               <a href="/spots" className="font-semibold text-red-400 underline underline-offset-2">
                 see all
               </a>
             </p>
+          )}
+
+          {/* Safety tips */}
+          {stage === "ready" && (
+            <div className="mb-4 rounded-2xl border border-amber-900/40 bg-amber-950/20 p-4">
+              <div className="mb-2 flex items-center gap-2 text-amber-400">
+                <LifeBuoy className="h-4 w-4" />
+                <span className="text-xs font-bold uppercase tracking-wider">While you wait — safety first</span>
+              </div>
+              <ul className="list-disc space-y-1 pl-4 text-sm text-neutral-400">
+                <li>Push your scooter instead of riding it on fumes — protect the battery.</li>
+                <li>Never charge in rain or standing water; ask your host to check the outlet.</li>
+                <li>Use your helmet and park facing the street so help can reach you.</li>
+                <li>Share your live location with a friend or family member.</li>
+              </ul>
+            </div>
           )}
 
           {/* Post-rescue guidance */}
