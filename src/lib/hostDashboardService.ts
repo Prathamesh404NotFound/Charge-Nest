@@ -196,7 +196,8 @@ export function getSpotSessionTrend(requests: HostBookingRequest[], days = 7): {
 /** Host actions on incoming booking requests for their spots. */
 export async function hostRespondToRequest(
   spotId: string, requestId: string, userId: string,
-  response: "approved" | "rejected" | "completed"
+  response: "approved" | "rejected" | "completed",
+  spotName?: string
 ): Promise<void> {
   const statusUpdate =
     response === "completed" ? { status: "completed", respondedAt: serverTimestamp() }
@@ -212,6 +213,46 @@ export async function hostRespondToRequest(
     await update(ref(database, `chargingRequests/${userId}/${requestId}`), sanitizeForDb(statusUpdate));
   } catch {
     /* ignore */
+  }
+  // Push-style alert to the rider even when their tab is closed/backgrounded.
+  notifyRiderBookingDecision(spotName, response);
+}
+
+/** Send a push-style alert to the rider: web Notification API (permission-gated)
+ * plus a Capacitor local notification for the Android app shell. */
+function notifyRiderBookingDecision(
+  spotName: string | undefined,
+  response: "approved" | "rejected" | "completed"
+): void {
+  const verb =
+    response === "approved" ? "approved"
+      : response === "rejected" ? "rejected"
+      : "completed";
+  const title = `Booking ${verb}`;
+  const body = `Your VoltSetu booking for ${spotName || "your spot"} was ${verb} — open the app to see details.`;
+  if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+    try {
+      new Notification(title, { body, icon: "/placeholder.svg" });
+    } catch {
+      /* unsupported browser context */
+    }
+  }
+  // Capacitor Android shell — local notification appears in the device shade.
+  try {
+    void import("@capacitor/local-notifications").then((cap) => {
+      void cap.LocalNotifications.schedule({
+        notifications: [{
+          id: Date.now() % 100000,
+          title,
+          body,
+          sound: undefined,
+          smallIcon: "ic_stat_icon_config_sample",
+          iconColor: "#4F46E5",
+        }],
+      });
+    }).catch(() => {});
+  } catch {
+    /* not in a Capacitor runtime */
   }
 }
 

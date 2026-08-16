@@ -293,17 +293,17 @@ export default function Earnings() {
                           <>
                             <Button size="sm" variant="outline" className={dangerOutlineClasses()}
                               disabled={responding === req.id}
-                              onClick={() => { setResponding(req.id); hostRespondToRequest(req.spotId, req.id, req.userId, "rejected").then(() => { setQueue(prev => prev.filter(r => r.id !== req.id)); toast.success("Request rejected"); }).catch(() => toast.error("Could not reject")).finally(() => setResponding(null)); }}>
+                              onClick={() => { setResponding(req.id); hostRespondToRequest(req.spotId, req.id, req.userId, "rejected", req.spotName).then(() => { setQueue(prev => prev.filter(r => r.id !== req.id)); toast.success("Request rejected"); }).catch(() => toast.error("Could not reject")).finally(() => setResponding(null)); }}>
                               Reject
                             </Button>
                             <Button size="sm" variant="outline"
                               disabled={responding === req.id}
-                              onClick={() => { setResponding(req.id); hostRespondToRequest(req.spotId, req.id, req.userId, "approved").then(() => { setQueue(prev => prev.map(r => r.id === req.id ? { ...r, status: "approved" } : r)); toast.success("Request approved"); }).catch(() => toast.error("Could not approve")).finally(() => setResponding(null)); }}>
+                              onClick={() => { setResponding(req.id); hostRespondToRequest(req.spotId, req.id, req.userId, "approved", req.spotName).then(() => { setQueue(prev => prev.map(r => r.id === req.id ? { ...r, status: "approved" } : r)); toast.success("Request approved"); }).catch(() => toast.error("Could not approve")).finally(() => setResponding(null)); }}>
                               {req.status === "approved" ? "Approved" : "Approve"}
                             </Button>
                             <Button size="sm" className="gradient-green hover:opacity-90"
                               disabled={responding === req.id}
-                              onClick={() => { setResponding(req.id); hostRespondToRequest(req.spotId, req.id, req.userId, "completed").then(() => { setQueue(prev => prev.filter(r => r.id !== req.id)); toast.success("Session marked complete — earnings logged"); }).catch(() => toast.error("Could not complete")).finally(() => setResponding(null)); }}>
+                              onClick={() => { setResponding(req.id); hostRespondToRequest(req.spotId, req.id, req.userId, "completed", req.spotName).then(() => { setQueue(prev => prev.filter(r => r.id !== req.id)); toast.success("Session marked complete — earnings logged"); }).catch(() => toast.error("Could not complete")).finally(() => setResponding(null)); }}>
                               {responding === req.id ? <Loader2 className="w-3 h-3 animate-spin" /> : "Mark Complete"}
                             </Button>
                           </>
