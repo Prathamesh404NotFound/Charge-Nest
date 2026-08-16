@@ -14,6 +14,9 @@ interface ChatPanelProps {
   peerName: string;
   peerPhone?: string;
   spotName?: string;
+  /** Optional host/spot ids so the host-side inbox (listenHostThreads) can find this thread. */
+  hostId?: string;
+  spotId?: string;
   compact?: boolean;
 }
 
@@ -21,7 +24,7 @@ interface ChatPanelProps {
  * In-app rider–host chat tied to a booking. Both sides see the same thread.
  * The thread is lazily created on first message; reads are live (onValue).
  */
-export default function ChatPanel({ threadId, peerName, peerPhone, spotName, compact }: ChatPanelProps) {
+export default function ChatPanel({ threadId, peerName, peerPhone, spotName, hostId, spotId, compact }: ChatPanelProps) {
   const { user } = useAuth() as { user: { id: string; displayName?: string } | null };
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState("");
@@ -36,8 +39,8 @@ export default function ChatPanel({ threadId, peerName, peerPhone, spotName, com
     (async () => {
       try {
         await getOrCreateThread(threadId, {
-          spotId: "", riderId: user.id, riderName: user.displayName,
-          hostId: "",
+          spotId: spotId || "", riderId: user.id, riderName: user.displayName,
+          hostId: hostId || "",
         });
       } catch {
         // thread may already exist with richer meta — ignore

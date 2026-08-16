@@ -496,6 +496,7 @@ export default function BookingModal({ isOpen, onClose, spot }: BookingModalProp
         spotName: spot.name,
         hostName: spot.hostName,
         hostPhone: spot.hostPhone || "",
+        hostId: spot.hostId,
         duration: activeDuration,
         message: message.trim(),
         pricePerHour: spot.pricePerHour,

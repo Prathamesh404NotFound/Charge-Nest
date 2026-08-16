@@ -29,6 +29,7 @@ export interface BookingRequest {
   spotName: string;
   hostName: string;
   hostPhone: string;
+  hostId?: string;
   userId: string;
   userName: string;
   userPhone: string;
@@ -106,6 +107,7 @@ export async function submitBookingRequest(
     spotName: spot.name || data.spotName,
     hostName: spot.hostName || data.hostName,
     hostPhone: spot.hostPhone || data.hostPhone,
+    hostId: spot.hostId || data.hostId || undefined,
     userId: user.uid,
     userName: user.displayName || "",
     userPhone: data.userPhone || "",

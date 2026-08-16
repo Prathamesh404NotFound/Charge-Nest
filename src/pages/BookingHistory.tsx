@@ -290,6 +290,8 @@ export default function BookingHistory() {
                               peerName={booking.hostName || "Host"}
                               peerPhone={booking.hostPhone}
                               spotName={booking.spotName}
+                              hostId={booking.hostId}
+                              spotId={booking.spotId}
                               compact
                             />
                           </div>

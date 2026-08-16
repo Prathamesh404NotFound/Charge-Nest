@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import SpotCard from "@/components/SpotCard";
 import HostRegistrationModal from "@/components/HostRegistration/HostRegistrationModal";
 import SpotEditor from "@/components/SpotEditor";
+import HostMessagesSection from "@/components/HostMessagesSection";
 import { Pencil } from "lucide-react";
 import { getUserProfile, UserProfile } from "@/lib/userService";
 import { getUserBookings, type BookingRequest } from "@/lib/bookingService";
@@ -403,6 +404,9 @@ export default function Dashboard() {
                 )}
               </CardContent>
             </Card>
+
+            {/* In-app rider–host chat inbox */}
+            {isHost && user ? <HostMessagesSection hostUid={user.id} /> : null}
 
             {/* Listing pause control */}
             <Card className="flex flex-col rounded-2xl hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
