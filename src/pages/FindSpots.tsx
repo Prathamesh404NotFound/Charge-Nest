@@ -19,7 +19,8 @@ import DestinationSearch, { type Destination } from "@/components/DestinationSea
 import { TripPlannerPanel } from "@/components/TripPlannerPanel";
 import spotsMapImg from "@/assets/spots-map.jpg";
 import { getAllChargingSpots } from "@/lib/hostRegistration";
-import { getAllNetworkStations, mergeNetworkStations } from "@/lib/networkStationsService";import { toast } from "sonner";
+import { getAllNetworkStations, mergeNetworkStations } from "@/lib/networkStationsService";
+import { getHostSettings, isHostPaused } from "@/lib/hostSettingsService";import { toast } from "sonner";
 import SpotsMap from "@/components/SpotsMap";
 import { Capacitor } from "@capacitor/core";
 import { Geolocation } from "@capacitor/geolocation";
@@ -63,7 +64,15 @@ export default function FindSpots() {
 
   useEffect(() => {
     Promise.all([getAllChargingSpots(), getAllNetworkStations()])
-      .then(([data, net]) => setSpots(mergeNetworkStations(data, net)))
+      .then(async ([data, net]) => {
+        const merged = mergeNetworkStations(data, net);
+        // Round 34: resolve each host's pause settings so rider UI can mark
+        // holiday-paused listings without blocking riders from discovering them.
+        const hostIds = Array.from(new Set(merged.map((s: any) => s.hostId).filter(Boolean)));
+        const settings = await Promise.all(hostIds.map(getHostSettings));
+        const settingsByHost = Object.fromEntries(hostIds.map((h, i) => [h, settings[i]]));
+        setSpots(merged.map((s: any) => ({ ...s, isPaused: isHostPaused(settingsByHost[s.hostId ?? ""] ?? null) })));
+      })
       .catch((err) => {
         console.error(err);
         toast.error("Failed to load charging spots");
@@ -311,6 +320,7 @@ export default function FindSpots() {
         rating={!spot.reviews?.length && !spot.totalCharges ? null : spot.rating}
         reviews={spot.reviews?.length || spot.totalCharges || 0}
         isOpen={isSpotOpen(spot.availableHours)}
+        isPaused={spot.isPaused}
         isVerified={spot.isVerified}
         outletType={spot.outletType}
         availableHours={spot.availableHours}
@@ -374,7 +384,7 @@ export default function FindSpots() {
               <SlidersHorizontal className="w-5 h-5 text-muted-foreground flex-shrink-0" />
               {filters.map((f) => {
                 let count: number | null = null;
-                if (f === "Open Now") count = spotsWithDistance.filter((s) => isSpotOpen(s.availableHours)).length;
+                if (f === "Open Now") count = spotsWithDistance.filter((s) => !s.isPaused && isSpotOpen(s.availableHours)).length;
                 else if (f === "Verified") count = spotsWithDistance.filter((s) => s.isVerified).length;
                 else if (f === "Under Rs 50") count = spotsWithDistance.filter((s) => s.pricePerHour < 50).length;
                 else if (f === "Top Rated") count = spotsWithDistance.filter((s) => s.rating >= 4.5).length;

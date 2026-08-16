@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, type ReactNode } from "react";
-import { Star, MapPin, Clock, BadgeCheck, Phone, Zap, Heart } from "lucide-react";
+import { Star, MapPin, Clock, BadgeCheck, Phone, Zap, Heart, Pause } from "lucide-react";
 import FacilitiesChips from "@/components/FacilitiesChips";
 import { cn } from "@/lib/utils";
 import { isFavorite, toggleFavorite } from "@/lib/favoritesService";
@@ -41,6 +41,8 @@ interface SpotCardProps {
   availableHours?: string;
   amenities?: Array<{ id?: string; icon?: string; name?: string }>;
   suggestedStop?: boolean;
+  /** Rider-side pause flag from hostSettings (Round 34). */
+  isPaused?: boolean;
   onBook?: () => void;
   /** Live toggle overlay: host's "outlet available now" status. */
   showLiveStatus?: boolean;
@@ -87,6 +89,7 @@ const overlayBadgeClass =
 export default function SpotCard({
   id, name, host, hostId, hostPhone, distance, pricePerHour, rating, reviews,
   isOpen, isVerified, isFeatured, image, outletType, availableHours, amenities, suggestedStop, onBook,
+  isPaused,
   showLiveStatus = true,
   showCostPerKm = true,
 }: SpotCardProps) {
@@ -202,7 +205,16 @@ export default function SpotCard({
       });
     }
 
-    if (isOpen !== undefined) {
+    if (isPaused) {
+      badges.push({
+        key: "paused",
+        node: (
+          <span className={cn(overlayBadgeClass, "bg-amber-500/90 text-white")}>
+            <Pause className="w-3 h-3" /> On break
+          </span>
+        ),
+      });
+    } else if (isOpen !== undefined) {
       badges.push({
         key: "hours",
         node: (
@@ -265,9 +277,13 @@ export default function SpotCard({
     }
 
     return badges;
-  }, [isFeatured, suggestedStop, isVerified, availability, isOpen, isNew, outletType, liveStatus, waitlistCount, t]);
+  }, [isFeatured, suggestedStop, isPaused, isVerified, availability, isOpen, isNew, outletType, liveStatus, waitlistCount, t]);
 
   const handleBookNow = () => {
+    if (isPaused) {
+      toast.info("This host is on a short break — their listing will be back soon.");
+      return;
+    }
     if (!user) {
       setShowLoginModal(true);
     } else if (onBook) {
@@ -302,6 +318,7 @@ export default function SpotCard({
       onPointerDown={handleCardPress}
       className={cn(
         "group relative bg-card rounded-2xl border border-border overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-1 flex flex-col h-full",
+        isPaused && "opacity-70 hover:translate-y-0",
         isFeatured && "ring-2 ring-primary/30",
         popping && "scale-[1.03] -translate-y-1 shadow-2xl duration-150 z-10"
       )}

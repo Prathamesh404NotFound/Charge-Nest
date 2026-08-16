@@ -23,7 +23,7 @@ import {
   type ReferralStats,
 } from "@/lib/referralService";
 import { exportHostEarningsCsv } from "@/lib/earningsExportService";
-import { ArrowDownToLine } from "lucide-react";
+import { ArrowDownToLine, LayoutGrid } from "lucide-react";
 import { isDark } from "@/lib/theme";
 import { statusTextColor, successTextClasses, dangerOutlineClasses } from "@/lib/darkTokens";
 import HostChatInbox from "@/components/HostChatInbox";
@@ -484,6 +484,37 @@ export default function Earnings() {
                 )}
                 {!referral?.nextMilestone && referral && (
                   <p className="text-xs text-ev-green font-semibold">All milestones earned — you're a VoltSetu Ambassador!</p>
+                )}
+              </CardContent>
+            </Card>
+            {/* Round 34: per-spot performance — sessions, revenue, avg rating for each listing */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <LayoutGrid className="w-4 h-4 text-primary" /> Spot Performance
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {spots.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-6 text-center">No spots yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {spots.map((spot) => {
+                      const st = spotStats[spot.id];
+                      return (
+                        <div key={spot.id} className="flex items-center justify-between rounded-xl border border-border bg-background px-3 py-2.5 gap-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">{spot.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {st ? `${st.totalBookings} session${st.totalBookings === 1 ? "" : "s"} · ₹${Math.round(st.revenue)} revenue` : "No activity yet"}
+                              {st && st.averageRating > 0 ? ` · ★ ${st.averageRating.toFixed(1)} (${st.reviewCount})` : ""}
+                            </p>
+                          </div>
+                          <span className={`text-sm font-bold shrink-0 ${successTextClasses()}`}>₹{st ? Math.round(st.revenue) : 0}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </CardContent>
             </Card>

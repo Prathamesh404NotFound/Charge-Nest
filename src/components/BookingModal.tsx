@@ -10,6 +10,7 @@ import {
   Plus,
   BadgeCheck,
   MessageSquare,
+  Pause,
 } from "lucide-react";
 import {
   Dialog,
@@ -138,6 +139,8 @@ interface BookingModalProps {
     isVerified?: boolean;
     availableHours?: string;
     amenities?: Amenity[];
+    /** Rider-side pause flag from hostSettings (Round 34). */
+    isPaused?: boolean;
   };
 }
 
@@ -187,6 +190,20 @@ function Step1SpotHero({
   spot: BookingModalProps["spot"];
   className?: string;
 }) {
+  if (spot.isPaused) {
+    return (
+      <div className={cn("rounded-xl bg-amber-500/10 border border-amber-500/30 p-4 flex items-start gap-3", className)}>
+        <Pause className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+        <div>
+          <p className="text-sm font-semibold text-foreground">{spot.name}</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            This host is on a short break (holiday mode). Bookings are paused until they return —
+            check back soon.
+          </p>
+        </div>
+      </div>
+    );
+  }
   const spotImage = spot.photos?.[0];
 
   return (
@@ -451,6 +468,7 @@ export default function BookingModal({ isOpen, onClose, spot }: BookingModalProp
   };
 
   const handleBook = async () => {
+    if (spot.isPaused) return;
     if (!canProceedStep(4)) {
       setStepValidationError(getStepValidationMessage(4));
       setDurationError(true);
