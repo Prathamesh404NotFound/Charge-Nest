@@ -25,7 +25,8 @@ import {
   Ticket,
   Activity,
   Flag,
-  BellRing
+  BellRing,
+  ShieldAlert
 } from 'lucide-react';
 import { useAuth } from '@/components/Auth/AuthProvider';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -128,6 +129,12 @@ const adminNavigation = [
     href: '/admin/city-waitlist',
     icon: BellRing,
     description: 'Upcoming-city rider & host signups'
+  },
+  {
+    title: 'Fraud & Anomalies',
+    href: '/admin/anomaly',
+    icon: ShieldAlert,
+    description: 'Automatic scan for suspicious bookings & referrals'
   },
 ];
 
