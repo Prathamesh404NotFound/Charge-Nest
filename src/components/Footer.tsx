@@ -7,8 +7,8 @@ const navLinks = [
   { to: "/how-it-works", label: "How It Works" },
   { to: "/pricing",      label: "Pricing" },
   { to: "/kolhapur",     label: "Kolhapur" },
-  { to: "/about",        label: "About Us" },
-  { to: "/contact",      label: "Contact" },
+  { to: "/about-contact", label: "About & Contact" },
+  
 ];
 
 const legalLinks = [

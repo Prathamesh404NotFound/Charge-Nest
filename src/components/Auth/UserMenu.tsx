@@ -1,4 +1,4 @@
-import { Star, BatteryWarning, SunMoon, User, LogOut, Settings, History, DollarSign, Shield } from "lucide-react";
+import { Star, BatteryWarning, Route as RouteIcon, SunMoon, User, LogOut, Settings, History, DollarSign, Shield } from "lucide-react";
 import { useAuth } from "./AuthProvider";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { cn } from "@/lib/utils";
@@ -72,6 +72,12 @@ export default function UserMenu() {
           <Link to="/rescue" className="flex items-center gap-2">
             <BatteryWarning className="w-4 h-4 animate-pulse text-red-500" />
             Roadside Rescue
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link to="/route" className="flex items-center gap-2">
+            <RouteIcon className="w-4 h-4 text-primary" />
+            Trip Planner
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />

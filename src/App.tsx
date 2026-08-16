@@ -31,8 +31,7 @@ const lazyHowItWorks = () => import("./pages/HowItWorks");
 const lazyPricing = () => import("./pages/Pricing");
 const lazyCityPage = () => import("./pages/CityPage");
 const lazyEmergencyRescue = () => import("./pages/EmergencyRescue");
-const lazyAbout = () => import("./pages/About");
-const lazyContact = () => import("./pages/Contact");
+const lazyAboutContact = () => import("./pages/AboutContact");
 const lazyDashboard = () => import("./pages/Dashboard");
 const lazyBookingHistory = () => import("./pages/BookingHistory");
 const lazyEarnings = () => import("./pages/Earnings");
@@ -54,7 +53,6 @@ const lazyAdminModeration = () => import("./pages/admin/AdminModerationPage");
 const lazyAdminNotifications = () => import("./pages/admin/AdminNotificationsPage");
 const lazyAdminCityWaitlist = () => import("./pages/Admin/AdminCityWaitlistPage");
 const lazyLoyalty = () => import("./pages/Loyalty");
-const lazyTripPlanner = () => import("./pages/TripPlannerPage");
 const lazyHostProfile = () => import("./pages/HostProfile");
 
 const queryClient = new QueryClient();
@@ -108,9 +106,12 @@ function AppContent() {
         <Route path="/kolhapur" element={<Navigate to="/city/kolhapur" replace />} />
         <Route path="/city/:slug" element={<LazyPage load={lazyCityPage} />} />
         <Route path="/rescue" element={<LazyPage load={lazyEmergencyRescue} />} />
-        <Route path="/route" element={<LazyPage load={lazyTripPlanner} />} />
-        <Route path="/about" element={<LazyPage load={lazyAbout} />} />
-        <Route path="/contact" element={<LazyPage load={lazyContact} />} />
+        {/* /route kept as a redirect so saved bookmarks still reach the planner via the profile menu */}
+        <Route path="/route" element={<Navigate to="/about-contact" replace />} />
+        {/* Trip Planner moved into the profile menu to keep the nav lean */}
+        <Route path="/about-contact" element={<LazyPage load={lazyAboutContact} />} />
+        <Route path="/about" element={<Navigate to="/about-contact" replace />} />
+        <Route path="/contact" element={<Navigate to="/about-contact" replace />} />
         <Route path="/dashboard" element={
           <AuthenticatedRoute>
             <main className="min-h-screen pt-24 responsive-container container-lg">

@@ -20,15 +20,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+// Kept lean by design: Trip Planner lives in the profile menu,
+// and About + Contact are merged into a single About & Contact page.
 const navLinkKeys = [
   { to: "/", key: "nav.home" },
   { to: "/spots", key: "nav.findSpots" },
   { to: "/host", key: "nav.becomeHost" },
   { to: "/how-it-works", key: "nav.howItWorks" },
   { to: "/pricing", key: "nav.pricing" },
-  { to: "/route", key: "nav.tripPlanner" },
-  { to: "/about", key: "nav.about" },
-  { to: "/contact", key: "nav.contact" },
+  { to: "/about-contact", key: "nav.aboutContact" },
 ];
 
 // At lg widths (1024–1279px) the full 7-link nav crowds the header. The
@@ -192,7 +192,7 @@ export default function Navbar() {
           </span>
           {user ? (
             <>
-              <ThemeToggle />
+              {/* Theme toggle moved inside the profile menu to keep the nav short */}
               <NotificationBell />
               <UserMenu />
               <Link
@@ -205,7 +205,7 @@ export default function Navbar() {
             </>
           ) : (
             <>
-              <ThemeToggle />
+              {/* Theme toggle moved inside the profile menu to keep the nav short */}
               <Button
                 variant="ghost"
                 onClick={() => setLoginModalOpen(true)}
@@ -240,7 +240,6 @@ export default function Navbar() {
         <div id="mobile-navigation" className="lg:hidden absolute top-full left-0 right-0 glass border-t border-border animate-slide-down">
           <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-col gap-1">
             <div className="flex items-center justify-end gap-2 mb-1">
-              <ThemeToggle compact />
               <button
                 type="button"
                 onClick={() => setLang(lang === "hi" ? "en" : "hi")}
