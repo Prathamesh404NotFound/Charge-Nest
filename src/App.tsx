@@ -53,6 +53,7 @@ const lazyAdminModeration = () => import("./pages/admin/AdminModerationPage");
 const lazyAdminNotifications = () => import("./pages/admin/AdminNotificationsPage");
 const lazyAdminCityWaitlist = () => import("./pages/Admin/AdminCityWaitlistPage");
 const lazyLoyalty = () => import("./pages/Loyalty");
+const lazyTripPlanner = () => import("./pages/TripPlannerPage");
 const lazyHostProfile = () => import("./pages/HostProfile");
 
 const queryClient = new QueryClient();
@@ -106,6 +107,7 @@ function AppContent() {
         <Route path="/kolhapur" element={<Navigate to="/city/kolhapur" replace />} />
         <Route path="/city/:slug" element={<LazyPage load={lazyCityPage} />} />
         <Route path="/rescue" element={<LazyPage load={lazyEmergencyRescue} />} />
+        <Route path="/route" element={<LazyPage load={lazyTripPlanner} />} />
         <Route path="/about" element={<LazyPage load={lazyAbout} />} />
         <Route path="/contact" element={<LazyPage load={lazyContact} />} />
         <Route path="/dashboard" element={

@@ -26,6 +26,7 @@ const navLinkKeys = [
   { to: "/host", key: "nav.becomeHost" },
   { to: "/how-it-works", key: "nav.howItWorks" },
   { to: "/pricing", key: "nav.pricing" },
+  { to: "/route", key: "nav.tripPlanner" },
   { to: "/about", key: "nav.about" },
   { to: "/contact", key: "nav.contact" },
 ];

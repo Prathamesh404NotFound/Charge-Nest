@@ -196,7 +196,7 @@ export default function FindSpots() {
         spot.coordinates.lng
       );
     }
-    return { ...spot, distance };
+    return { ...spot, distance, lat: spot.coordinates?.lat, lng: spot.coordinates?.lng };
   });
 
   const baseFilteredSpots = useMemo(() => {

@@ -6,7 +6,7 @@
  * with ₹/km prices so riders can pick the cheapest stop on their commute.
  */
 import { useState } from "react";
-import { MapPin, Navigation2, Loader2, BatteryCharging } from "lucide-react";
+import { MapPin, Navigation2, Loader2, BatteryCharging, Crosshair, Clock, MapPinned } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { useT } from "@/lib/i18n";
@@ -36,6 +36,7 @@ export function TripPlannerPanel({ spots, onPickSpot }: TripPlannerPanelProps) {
   const t = useT();
   const [startQuery, setStartQuery] = useState("");
   const [endQuery, setEndQuery] = useState("");
+  const [myLocLoading, setMyLocLoading] = useState(false);
   const [corridor, setCorridor] = useState(3);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +62,14 @@ export function TripPlannerPanel({ spots, onPickSpot }: TripPlannerPanelProps) {
         setLoading(false);
         return;
       }
-      const res = await findSpotsOnRoute(start as LatLng, end as LatLng, spots, corridor);
+      // Include only spots that actually carry coordinates for corridor matching.
+      const indexed = spots.filter((s) => s.lat != null && s.lng != null);
+      if (indexed.length === 0) {
+        setError("No charging spots with locations are loaded yet. Please wait and try again.");
+        setLoading(false);
+        return;
+      }
+      const res = await findSpotsOnRoute(start as LatLng, end as LatLng, indexed, corridor);
       setResult({
         routeSpots: res.routeSpots,
         totalKm: res.totalKm,
@@ -73,6 +81,25 @@ export function TripPlannerPanel({ spots, onPickSpot }: TripPlannerPanelProps) {
       setError("Something went wrong planning the route. Please try again.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function useMyLocation() {
+    if (myLocLoading) return;
+    if (!navigator.geolocation) {
+      setError("Geolocation is not supported by your browser.");
+      return;
+    }
+    setMyLocLoading(true);
+    try {
+      const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 }),
+      );
+      setStartQuery(`${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`);
+    } catch {
+      setError("Location access was denied — type a place name instead (e.g. Kolhapur, Maharashtra).");
+    } finally {
+      setMyLocLoading(false);
     }
   }
 
@@ -90,9 +117,20 @@ export function TripPlannerPanel({ spots, onPickSpot }: TripPlannerPanelProps) {
           <input
             value={startQuery}
             onChange={(e) => setStartQuery(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handlePlan()}
             placeholder={t("trip.start") + " (e.g. Kolhapur, Maharashtra)"}
-            className="w-full rounded-lg border border-border bg-background pl-9 pr-3 py-2.5 text-sm outline-none focus:border-primary transition-colors"
+            className="w-full rounded-lg border border-border bg-background pl-9 pr-10 py-2.5 text-sm outline-none focus:border-primary transition-colors"
           />
+          <button
+            type="button"
+            onClick={useMyLocation}
+            disabled={myLocLoading}
+            title="Use my current location as start"
+            aria-label="Use my current location as start"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-muted-foreground hover:text-primary hover:bg-muted transition-colors"
+          >
+            {myLocLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Crosshair className="w-3.5 h-3.5" />}
+          </button>
         </div>
         <div className="relative">
           <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500" />
@@ -143,10 +181,16 @@ export function TripPlannerPanel({ spots, onPickSpot }: TripPlannerPanelProps) {
           <ul className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
             {result.routeSpots.map((rs) => (
               <li key={rs.spot.id} className="flex items-center gap-2.5 rounded-lg border border-border bg-background px-3 py-2 text-sm hover:border-primary/50 transition-colors">
-                <BatteryCharging className="w-4 h-4 text-primary shrink-0" />
+                <MapPinned className="w-4 h-4 text-primary shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{rs.spot.name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium truncate">{rs.spot.name}</p>
+                    {rs.spot.isAvailable !== false && (
+                      <Clock className="w-3 h-3 text-ev-green shrink-0" title="Open now" />
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground">
+                    {rs.spot.city ? `${rs.spot.city} · ` : ""}
                     {rs.distanceFromStartKm} km from start · {rs.minDistanceToRouteKm} km off route
                     {rs.spot.pricePerHour ? ` · ₹${pricePerKmRs(rs.spot.pricePerHour)?.toFixed(2) ?? "—"}/km` : ""}
                   </p>
