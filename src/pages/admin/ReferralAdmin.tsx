@@ -6,13 +6,13 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import ResponsiveContainer from "@/components/ui/responsive-container";
-import { Award, ArrowLeft, Users, Coins, Ticket, TrendingUp, ExternalLink } from "lucide-react";
+import { Award, ArrowLeft, Users, Coins, Ticket, TrendingUp, ExternalLink, Medal, Crown, Star } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getAdminReferrals, type AdminReferralCode } from "@/lib/referralAdminService";
-import { CREDIT_PER_APPROVAL } from "@/lib/referralService";
+import { CREDIT_PER_APPROVAL, REFERRAL_MILESTONES } from "@/lib/referralService";
 import SEO from "@/components/SEO";
 import { useAuth } from "@/components/Auth/AuthProvider";
 import { getUserProfile } from "@/lib/userService";
@@ -120,6 +120,39 @@ export default function ReferralAdmin() {
         </Card>
       </div>
 
+      {/* Leaderboard podium — top 3 referrers */}
+      {data!.codes.filter((c) => c.referredCount > 0).length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+          {data!.codes
+            .filter((c) => c.referredCount > 0)
+            .sort((a, b) => b.referredCount - a.referredCount)
+            .slice(0, 3)
+            .map((c, i) => {
+              const rank = i + 1;
+              const icon = rank === 1 ? Crown : rank === 2 ? Medal : Star;
+              const colors = ["border-amber-400 bg-amber-400/10 text-amber-500", "border-slate-400 bg-slate-400/10 text-slate-500", "border-orange-400 bg-orange-400/10 text-orange-600"];
+              return (
+                <Card key={c.hostUid} className={`rounded-2xl border-2 ${colors[i]} ${rank === 1 ? "md:-mt-3" : ""}`}>
+                  <CardContent className="p-4 text-center">
+                    <icon className="w-6 h-6 mx-auto mb-1" />
+                    <p className="font-bold">{c.hostName}</p>
+                    <p className="text-xs text-muted-foreground">{c.code}</p>
+                    <p className="mt-2 text-xl font-bold">{c.referredCount} host{c.referredCount === 1 ? "" : "s"} referred</p>
+                    <p className="text-xs text-muted-foreground">₹{c.credits} earned</p>
+                    {c.credits > 0 && (
+                      <div className="mt-2 flex flex-wrap justify-center gap-1">
+                        {REFERRAL_MILESTONES.filter((m) => c.referredCount >= m.at).map((m) => (
+                          <span key={m.title} className="rounded-full bg-ev-green/15 px-2 py-0.5 text-[10px] font-semibold text-ev-green">{m.title}</span>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+        </div>
+      )}
+
       {/* Codes table */}
       <Card className="rounded-2xl overflow-hidden">
         <CardHeader className="bg-primary/5">
@@ -139,6 +172,7 @@ export default function ReferralAdmin() {
                     <TableHead>Host</TableHead>
                     <TableHead>Referred</TableHead>
                     <TableHead>Credits</TableHead>
+                    <TableHead>Milestones</TableHead>
                     <TableHead>Claims</TableHead>
                     <TableHead>Created</TableHead>
                   </TableRow>
@@ -162,6 +196,23 @@ export default function ReferralAdmin() {
                       </TableCell>
                       <TableCell>
                         <span className="font-semibold">₹{c.credits}</span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          {REFERRAL_MILESTONES.map((m) => (
+                            <div key={m.title} className="flex items-center gap-1.5 text-xs">
+                              <div className="w-14 h-1 rounded-full bg-muted overflow-hidden">
+                                <div
+                                  className="h-full bg-ev-green"
+                                  style={{ width: `${Math.min(100, Math.round((c.referredCount / m.at) * 100))}%` }}
+                                />
+                              </div>
+                              <span className={`truncate ${c.referredCount >= m.at ? "font-semibold text-ev-green" : "text-muted-foreground"}`}>
+                                {m.title} {c.referredCount >= m.at ? `✓` : `· ${m.at - c.referredCount} to go`}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1 text-xs text-muted-foreground">

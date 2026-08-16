@@ -16,6 +16,15 @@ import { database } from "./firebase-services";
 import { sanitizeForDb } from "./bookingService";
 
 export const CREDIT_PER_APPROVAL = 50; // ₹
+
+/* Milestone rewards — bonus credits when a referrer passes an approval count.
+ * Rewards are additive: each newly crossed milestone grants its bonus once. */
+export const REFERRAL_MILESTONES: { at: number; reward: number; title: string }[] = [
+  { at: 3, reward: 100, title: "Spark" },
+  { at: 5, reward: 200, title: "Connector" },
+  { at: 10, reward: 500, title: "Mentor" },
+  { at: 25, reward: 1500, title: "Ambassador" },
+];
 const CODE_PREFIX = "VS";
 const MAX_CLAIM_PER_HOST = 1;
 
@@ -84,12 +93,35 @@ export async function claimReferral(
     claimedAt: serverTimestamp(),
   });
 
-  await update(ref(database, `users/${meta.hostUid}`), {
-    referralCredits: (Number((await get(ref(database, `users/${meta.hostUid}/referralCredits`))).val() ?? 0)) + CREDIT_PER_APPROVAL,
-    referredCount: (Number((await get(ref(database, `users/${meta.hostUid}/referredCount`))).val() ?? 0)) + 1,
+  const referrerUid = meta.hostUid;
+  const oldCount = Number((await get(ref(database, `users/${referrerUid}/referredCount`))).val() ?? 0);
+  const oldCredits = Number((await get(ref(database, `users/${referrerUid}/referralCredits`))).val() ?? 0);
+  const oldMilestoneCredits = Number((await get(ref(database, `users/${referrerUid}/milestoneCredits`))).val() ?? 0);
+  const newCount = oldCount + 1;
+
+  // Bonus for every milestone newly crossed by this approval.
+  let milestoneBonus = 0;
+  REFERRAL_MILESTONES.forEach((m) => {
+    if (oldCount < m.at && newCount >= m.at) milestoneBonus += m.reward;
   });
 
-  return { granted: CREDIT_PER_APPROVAL, message: `₹${CREDIT_PER_APPROVAL} credit awarded to the referrer.` };
+  await update(ref(database, `users/${referrerUid}`), {
+    referralCredits: oldCredits + CREDIT_PER_APPROVAL + milestoneBonus,
+    referredCount: newCount,
+    ...(milestoneBonus > 0 ? { milestoneCredits: oldMilestoneCredits + milestoneBonus } : {}),
+  });
+
+  const granted = CREDIT_PER_APPROVAL + milestoneBonus;
+  const earnedTitles = REFERRAL_MILESTONES.filter((m) => newCount >= m.at)
+    .map((m) => m.title)
+    .join(" · ");
+  return {
+    granted,
+    message:
+      milestoneBonus > 0
+        ? `₹${CREDIT_PER_APPROVAL} credit awarded + ₹${milestoneBonus} milestone bonus (${earnedTitles})!`
+        : `₹${CREDIT_PER_APPROVAL} credit awarded to the referrer.`,
+  };
 }
 
 /** Read a host's referral stats for the dashboard. */
@@ -97,19 +129,31 @@ export interface ReferralStats {
   code: string;
   credits: number;
   referredCount: number;
+  milestoneCredits: number;
+  nextMilestone: { at: number; reward: number; title: string; remaining: number } | null;
+  earnedTitles: string[];
 }
 
 export async function getReferralStats(uid: string): Promise<ReferralStats | null> {
   if (!uid) return null;
   try {
-    const [creditsSnap, countSnap] = await Promise.all([
+    const [creditsSnap, countSnap, milestoneSnap] = await Promise.all([
       get(ref(database, `users/${uid}/referralCredits`)),
       get(ref(database, `users/${uid}/referredCount`)),
+      get(ref(database, `users/${uid}/milestoneCredits`)),
     ]);
+    const credits = Number(creditsSnap.val() ?? 0);
+    const referredCount = Number(countSnap.val() ?? 0);
+    const milestoneCredits = Number(milestoneSnap.val() ?? 0);
+    const earnedTitles = REFERRAL_MILESTONES.filter((m) => referredCount >= m.at).map((m) => m.title);
+    const next = REFERRAL_MILESTONES.find((m) => referredCount < m.at) ?? null;
     return {
       code: referralCodeFor(uid),
-      credits: Number(creditsSnap.val() ?? 0),
-      referredCount: Number(countSnap.val() ?? 0),
+      credits,
+      referredCount,
+      milestoneCredits,
+      nextMilestone: next ? { ...next, remaining: next.at - referredCount } : null,
+      earnedTitles,
     };
   } catch {
     return null;

@@ -2,19 +2,26 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowLeft, TrendingUp, IndianRupee, Zap, BarChart3,
-  Loader2, MapPin, Clock, CheckCircle2, AlertCircle, Home
+  Loader2, MapPin, Clock, CheckCircle2, AlertCircle, Home, Award
 } from "lucide-react";
 import { useAuth } from "@/components/Auth/AuthProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getUserProfile } from "@/lib/userService";
 import { getHostEarnings, EarningsSummary } from "@/lib/earningsService";
-import {
-  getHostSpots, getHostSpotStats, hostRespondToRequest,
+import { getHostSpots, getHostSpotStats, hostRespondToRequest,
   getHostPendingQueue, listenPendingQueue, getHostAvailability,
   setHostAvailability, getHostPayoutRequests, requestPayout,
   HostSpot, HostBookingRequest, AvailabilitySlot, PayoutRequest,
 } from "@/lib/hostDashboardService";
+import {
+  referralCodeFor,
+  ensureReferralCode,
+  getReferralStats,
+  REFERRAL_MILESTONES,
+  CREDIT_PER_APPROVAL,
+  type ReferralStats,
+} from "@/lib/referralService";
 import { exportHostEarningsCsv } from "@/lib/earningsExportService";
 import { ArrowDownToLine } from "lucide-react";
 import { isDark } from "@/lib/theme";
@@ -49,6 +56,8 @@ export default function Earnings() {
   const [requestingPayout, setRequestingPayout] = useState(false);
   const [upiId, setUpiId] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [referral, setReferral] = useState<ReferralStats | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!user || !isHost) return;
@@ -79,6 +88,13 @@ export default function Earnings() {
         if (disposed) return;
         setCalendar(cal);
         setPayouts(await getHostPayoutRequests(user.id));
+        try {
+          const prof = await getUserProfile(user.id);
+          await ensureReferralCode(user.id, prof.name || "VoltSetu Host");
+        } catch {
+          /* best-effort index entry */
+        }
+        setReferral(await getReferralStats(user.id));
       } catch {
         toast.error("Failed to load host workspace");
       } finally {
@@ -406,6 +422,71 @@ export default function Earnings() {
               </Button>
               <p className="text-xs text-muted-foreground w-full">After admin marks your payout as paid, earnings reset from the due amount.</p>
             </div>
+
+            {/* Refer & Earn card */}
+            <Card className="bg-gradient-to-br from-primary/10 to-ev-green/10">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Award className="w-5 h-5 text-primary" /> Refer & Earn
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Earn <strong className="text-foreground">₹{CREDIT_PER_APPROVAL}</strong> for every host you refer (credited after admin approves their listing),
+                  plus milestone bonuses: <strong className="text-foreground">{REFERRAL_MILESTONES.map(m => `${m.at} hosts → ₹${m.reward}`).join(" · ")}</strong>.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <code className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm font-mono truncate">
+                    {referral?.code || "—"}
+                  </code>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    disabled={!referral?.code}
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(referral!.code);
+                        setCopied(true);
+                        toast.success("Referral code copied!");
+                        setTimeout(() => setCopied(false), 2000);
+                      } catch {
+                        toast.error("Could not copy — copy manually.");
+                      }
+                    }}
+                  >
+                    {copied ? "Copied!" : "Copy code"}
+                  </Button>
+                </div>
+                <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+                  <span>Referred: <strong className="text-foreground">{referral?.referredCount ?? 0} hosts</strong></span>
+                  <span>Credits: <strong className="text-foreground">₹{referral?.credits ?? 0}</strong></span>
+                  {referral?.earnedTitles.length ? (
+                    <span className="inline-flex items-center gap-1">
+                      {referral.earnedTitles.map(t => (
+                        <span key={t} className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">{t}</span>
+                      ))}
+                    </span>
+                  ) : null}
+                </div>
+                {referral?.nextMilestone && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full gradient-green"
+                        style={{ width: `${Math.min(100, Math.round(((referral.nextMilestone.at - referral.nextMilestone.remaining) / referral.nextMilestone.at) * 100))}%` }}
+                      />
+                    </div>
+                    <span className="text-muted-foreground whitespace-nowrap">
+                      {referral.nextMilestone.remaining} more host{referral.nextMilestone.remaining === 1 ? "" : "s"} for <strong className="text-foreground">{referral.nextMilestone.title} (+₹{referral.nextMilestone.reward})</strong>
+                    </span>
+                  </div>
+                )}
+                {!referral?.nextMilestone && referral && (
+                  <p className="text-xs text-ev-green font-semibold">All milestones earned — you're a VoltSetu Ambassador!</p>
+                )}
+              </CardContent>
+            </Card>
             <Card>
               <CardHeader><CardTitle className="text-base">Payout History</CardTitle></CardHeader>
               <CardContent>
