@@ -60,11 +60,61 @@ export async function enrichRiderReputation(
 
 export interface PayoutRequest {
   id: string;
+  hostId?: string;
+  hostName?: string;
+  hostPhone?: string;
   amount: number;
+  upiId?: string;
   status: "pending" | "processing" | "paid" | "rejected";
   createdAt: number;
   paidAt?: number;
   requestedAt?: number;
+  note?: string;
+}
+
+/** Fetch every host payout request across the platform (admin). */
+export async function getAllPayoutRequests(): Promise<PayoutRequest[]> {
+  const snap = await get(ref(database, "payoutRequests"));
+  if (!snap.exists()) return [];
+  const all: PayoutRequest[] = [];
+  Object.entries(snap.val() as Record<string, Record<string, PayoutRequest>>).forEach(([hostId, reqs]) => {
+    Object.entries(reqs).forEach(([id, p]) => {
+      all.push({ id, hostId, ...(p as PayoutRequest) });
+    });
+  });
+  return all.sort((a, b) => b.createdAt - a.createdAt);
+}
+
+/** Approve (mark paid) or reject a host payout request (admin). */
+export async function decidePayoutRequest(
+  hostId: string,
+  requestId: string,
+  decision: "paid" | "rejected",
+  note?: string,
+): Promise<void> {
+  const payload: Record<string, unknown> = {
+    status: decision,
+    ...(decision === "paid"
+      ? { paidAt: Date.now(), note: note || "Paid via VoltSetu admin workspace" }
+      : { note: note || "Rejected by admin" }),
+  };
+  await update(ref(database, `payoutRequests/${hostId}/${requestId}`), sanitizeForDb(payload));
+  // Keep the admin payout ledger consistent: record the paid amount under payouts/{hostId}
+  if (decision === "paid") {
+    const snap = await get(ref(database, `payoutRequests/${hostId}/${requestId}`));
+    const req = snap.exists() ? (snap.val() as PayoutRequest) : null;
+    if (req && req.amount) {
+      const ledgerRef = push(ref(database, `payouts/${hostId}`));
+      await set(ledgerRef, sanitizeForDb({
+        hostId,
+        amount: Math.round(req.amount * 100) / 100,
+        status: "paid" as const,
+        paidAt: Date.now(),
+        createdAt: Date.now(),
+        note: note || "Paid via VoltSetu admin workspace",
+      }));
+    }
+  }
 }
 
 /** Fetch the host's own charging spots from chargingSpots (by hostId). */
@@ -218,7 +268,7 @@ export async function setSpotSchedule(
 // ── Payout requests ─────────────────────────────────────────────────────────
 
 /** Create a payout request for the host (idempotent while one is pending). */
-export async function requestPayout(hostUid: string, amount: number): Promise<string> {
+export async function requestPayout(hostUid: string, amount: number, upiId?: string): Promise<string> {
   // Prevent double requests: only one pending/processing payout per host
   const existing = await get(ref(database, `payoutRequests/${hostUid}`));
   if (existing.exists()) {
@@ -226,10 +276,15 @@ export async function requestPayout(hostUid: string, amount: number): Promise<st
       .some(p => p.status === "pending" || p.status === "processing");
     if (active) throw new Error("You already have an active payout request. Wait for it to be processed.");
   }
+  if (upiId && !/^\S+@\S+$/.test(upiId)) {
+    throw new Error("Enter a valid UPI ID, e.g. name@upi or 9xxxxxxxxx@upi");
+  }
   const newRef = push(ref(database, `payoutRequests/${hostUid}`));
   await set(newRef, sanitizeForDb({
+    hostId: hostUid,
     amount: Math.round(amount * 100) / 100,
     status: "pending" as const,
+    upiId: upiId?.trim() || undefined,
     requestedAt: serverTimestamp(),
     createdAt: Date.now(),
   }));

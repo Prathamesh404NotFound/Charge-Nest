@@ -8,13 +8,20 @@ import {
   Loader2,
   ReceiptText,
   RefreshCw,
+  ShieldCheck,
   Users,
   Wallet,
+  XCircle,
 } from "lucide-react";
-import { get, push, ref, serverTimestamp, update } from "firebase/database";
+import { get, push, ref, serverTimestamp, update, set } from "firebase/database";
 import { database } from "@/lib/firebase-services";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  getAllPayoutRequests,
+  decidePayoutRequest,
+  type PayoutRequest as HostPayoutRequest,
+} from "@/lib/hostDashboardService";
 
 interface BookingRow {
   id: string;
@@ -41,6 +48,11 @@ interface PayoutRecord {
   paidAt?: number;
   createdAt: number;
   note?: string;
+}
+
+interface PayoutRequestRow extends HostPayoutRequest {
+  hostName?: string;
+  hostPhone?: string;
 }
 
 interface HostLedger {
@@ -70,15 +82,18 @@ export default function AdminPayoutsPage() {
   const [loading, setLoading] = useState(true);
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [payouts, setPayouts] = useState<PayoutRecord[]>([]);
+  const [requests, setRequests] = useState<PayoutRequestRow[]>([]);
   const [filter, setFilter] = useState<"all" | "due" | "cleared">("all");
+  const [decidingId, setDecidingId] = useState<string | null>(null);
 
   async function loadData() {
     setLoading(true);
     try {
-      const [spotsSnap, requestsSnap, payoutsSnap] = await Promise.all([
+      const [spotsSnap, requestsSnap, payoutsSnap, requestsList] = await Promise.all([
         get(ref(database, "chargingSpots")),
         get(ref(database, "chargingRequests")),
         get(ref(database, "payouts")),
+        getAllPayoutRequests(),
       ]);
 
       const spotMap = new Map<string, { hostId: string; hostName: string; hostPhone: string; name: string; city: string }>();
@@ -139,8 +154,20 @@ export default function AdminPayoutsPage() {
         });
       }
 
+      const enrichedRequests: PayoutRequestRow[] = requestsList.map((r) => {
+        const match = Object.values(spotsSnap.exists() ? spotsSnap.val() : {})?.find?.(
+          (s: any) => s.hostId === r.hostId
+        ) as { hostName?: string; hostPhone?: string } | undefined;
+        return {
+          ...r,
+          hostName: match?.hostName || "Host",
+          hostPhone: match?.hostPhone || "",
+        };
+      });
+
       setBookings(rows);
       setPayouts(payoutRows);
+      setRequests(enrichedRequests);
     } catch (error) {
       console.error("Failed to load payout data:", error);
       toast.error("Could not load payout data. Please retry.");
@@ -219,8 +246,16 @@ export default function AdminPayoutsPage() {
       gross: ledgers.reduce((acc, l) => acc + l.grossEarnings, 0),
       pending: ledgers.reduce((acc, l) => acc + l.pendingPayout, 0),
       paid: ledgers.reduce((acc, l) => acc + l.paidOut, 0),
+      openRequests: requests.filter((r) => r.status === "pending" || r.status === "processing").length,
     }),
-    [ledgers]
+    [ledgers, requests]
+  );
+
+  const activeRequests = requests.filter(
+    (r) => r.status === "pending" || r.status === "processing"
+  );
+  const closedRequests = requests.filter(
+    (r) => r.status === "paid" || r.status === "rejected"
   );
 
   async function markPaid(hostId: string, hostName: string, amount: number) {
@@ -243,6 +278,38 @@ export default function AdminPayoutsPage() {
     } catch (error) {
       console.error("Payout write failed:", error);
       toast.error("Could not record payout. Please retry.");
+    }
+  }
+
+  async function handleDecision(
+    req: PayoutRequestRow,
+    decision: "paid" | "rejected"
+  ) {
+    if (!req.hostId) {
+      toast.error("This request is missing its host reference.");
+      return;
+    }
+    setDecidingId(req.id);
+    try {
+      await decidePayoutRequest(
+        req.hostId,
+        req.id,
+        decision,
+        decision === "paid"
+          ? "Approved via VoltSetu admin payout queue"
+          : "Rejected via VoltSetu admin payout queue"
+      );
+      toast.success(
+        decision === "paid"
+          ? `Payout of ₹${req.amount.toFixed(2)} approved for ${req.hostName}`
+          : `Payout request of ₹${req.amount.toFixed(2)} rejected.`
+      );
+      await loadData();
+    } catch (error) {
+      console.error("Payout decision failed:", error);
+      toast.error("Could not process that request. Please retry.");
+    } finally {
+      setDecidingId(null);
     }
   }
 
@@ -277,6 +344,7 @@ export default function AdminPayoutsPage() {
           { label: "Gross host earnings", value: `₹${totals.gross.toFixed(2)}`, icon: IndianRupee },
           { label: "Pending payout", value: `₹${totals.pending.toFixed(2)}`, icon: ReceiptText },
           { label: "Already paid", value: `₹${totals.paid.toFixed(2)}`, icon: CheckCircle2 },
+          { label: "Open payout requests", value: String(totals.openRequests), icon: ShieldCheck },
         ].map((stat) => (
           <div key={stat.label} className="rounded-xl border border-border bg-card p-4 shadow-sm">
             <div className="flex items-center gap-2 text-muted-foreground">
@@ -303,6 +371,105 @@ export default function AdminPayoutsPage() {
             {f === "all" ? "All hosts" : f === "due" ? "Payment due" : "Cleared"}
           </button>
         ))}
+      </div>
+
+      {/* Host-initiated payout requests queue */}
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-semibold text-foreground">Payout Requests</h2>
+          <span className="ml-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
+            {activeRequests.length} open
+          </span>
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Hosts request withdrawals from their due balance. Approve to pay and record the ledger entry,
+          or reject to send it back.
+        </p>
+        {activeRequests.length === 0 ? (
+          <p className="mt-4 rounded-xl border border-dashed border-border bg-muted/40 py-8 text-center text-sm text-muted-foreground">
+            No payout requests waiting — hosts haven't asked to withdraw yet.
+          </p>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {activeRequests.map((req) => (
+              <div key={req.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-background p-4">
+                <div className="min-w-40 flex-1">
+                  <p className="text-sm font-semibold text-foreground">{req.hostName}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {req.hostPhone || "No phone on file"}{req.upiId ? ` · ${req.upiId}` : " · no UPI provided"}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-base font-bold text-foreground">₹{req.amount.toFixed(2)}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {new Date(req.createdAt).toLocaleString("en-IN")}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    className="gap-1.5 bg-ev-green hover:bg-ev-green/90 text-white"
+                    disabled={decidingId === req.id}
+                    onClick={() => handleDecision(req, "paid")}
+                  >
+                    {decidingId === req.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ShieldCheck className="h-4 w-4" />
+                    )}
+                    Approve
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 text-destructive border-destructive/40 hover:bg-destructive/10"
+                    disabled={decidingId === req.id}
+                    onClick={() => handleDecision(req, "rejected")}
+                  >
+                    {decidingId === req.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <XCircle className="h-4 w-4" />
+                    )}
+                    Reject
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {closedRequests.length > 0 && (
+          <details className="mt-4">
+            <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground">
+              {closedRequests.length} processed request{closedRequests.length === 1 ? "" : "s"} (paid or rejected)
+            </summary>
+            <div className="mt-2 space-y-1.5">
+              {closedRequests.map((req) => (
+                <div key={req.id} className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2 text-xs">
+                  <span className="text-muted-foreground">
+                    {req.status === "paid" ? (
+                      <span className="inline-flex items-center gap-1 text-ev-green">
+                        <CheckCircle2 className="h-3 w-3" /> Paid
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-destructive">
+                        <XCircle className="h-3 w-3" /> Rejected
+                      </span>
+                    )}
+                    <span className="ml-2 font-medium text-foreground">{req.hostName}</span>
+                    <span className="ml-1.5">· ₹{req.amount.toFixed(2)}</span>
+                    {req.upiId ? <span className="ml-1.5">· {req.upiId}</span> : null}
+                    <span className="ml-1.5">
+                      · {req.paidAt ? new Date(req.paidAt).toLocaleString("en-IN") : new Date(req.createdAt).toLocaleString("en-IN")}
+                    </span>
+                  </span>
+                  {req.note ? <span className="max-w-[40%] truncate text-muted-foreground/70">{req.note}</span> : null}
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
       </div>
 
       {loading ? (

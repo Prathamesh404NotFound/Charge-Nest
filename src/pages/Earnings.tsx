@@ -47,6 +47,7 @@ export default function Earnings() {
   const [hostLoading, setHostLoading] = useState(false);
   const [responding, setResponding] = useState<string | null>(null);
   const [requestingPayout, setRequestingPayout] = useState(false);
+  const [upiId, setUpiId] = useState("");
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
@@ -387,12 +388,23 @@ export default function Earnings() {
                 <p className="text-2xl font-bold text-primary">₹{dueForPayout}</p>
               </CardContent></Card>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <Button className="gradient-green hover:opacity-90" disabled={requestingPayout || dueForPayout <= 0}
-                onClick={() => { setRequestingPayout(true); requestPayout(user!.id, dueForPayout).then(async () => { setPayouts(await getHostPayoutRequests(user!.id)); toast.success("Payout requested — admin will review it"); }).catch((e: any) => toast.error(String(e?.message || "Could not request payout"))).finally(() => setRequestingPayout(false)); }}>
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-muted/40 p-4">
+              <div className="flex-1 min-w-56">
+                <label className="text-xs font-medium text-muted-foreground" htmlFor="host-upi-id">UPI ID for payout</label>
+                <input
+                  id="host-upi-id"
+                  type="text"
+                  value={upiId}
+                  onChange={(e) => setUpiId(e.target.value)}
+                  placeholder="e.g. yourname@upi"
+                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-primary"
+                />
+              </div>
+              <Button className="gradient-green hover:opacity-90 shrink-0" disabled={requestingPayout || dueForPayout <= 0}
+                onClick={() => { setRequestingPayout(true); requestPayout(user!.id, dueForPayout, upiId).then(async () => { setPayouts(await getHostPayoutRequests(user!.id)); setUpiId(""); toast.success("Payout requested — admin will review it"); }).catch((e: any) => toast.error(String(e?.message || "Could not request payout"))).finally(() => setRequestingPayout(false)); }}>
                 {requestingPayout ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}Request Payout of ₹{dueForPayout}
               </Button>
-              <p className="text-xs text-muted-foreground">After admin marks your payout as paid, earnings reset from the due amount.</p>
+              <p className="text-xs text-muted-foreground w-full">After admin marks your payout as paid, earnings reset from the due amount.</p>
             </div>
             <Card>
               <CardHeader><CardTitle className="text-base">Payout History</CardTitle></CardHeader>
@@ -405,7 +417,7 @@ export default function Earnings() {
                       <div key={p.id} className="flex items-center justify-between p-3 rounded-xl border border-border">
                         <div className="flex items-center gap-3">
                           <span className={`w-2.5 h-2.5 rounded-full ${statusTextColor(p.status === "paid" ? "completed" : p.status === "processing" ? "processing" : p.status === "rejected" ? "rejected" : "pending").split(" ")[0].replace("text", "bg")}`} />
-                          <p className="text-sm text-foreground">₹{p.amount} · {formatDate(p.createdAt)}</p>
+                          <p className="text-sm text-foreground">₹{p.amount} · {formatDate(p.createdAt)}{p.upiId ? ` · ${p.upiId}` : ""}</p>
                         </div>
                         <span className="text-xs font-medium capitalize text-muted-foreground">{p.status}</span>
                       </div>
