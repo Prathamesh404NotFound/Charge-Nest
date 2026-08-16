@@ -103,14 +103,14 @@ export default function Navbar() {
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
         scrolled
-          ? "glass py-3 shadow-lg"
-          : "bg-transparent py-5"
+          ? "glass py-2 shadow-lg"
+          : "bg-transparent py-2.5"
       )}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2 group flex-shrink-0">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl gradient-primary flex items-center justify-center shadow-lg group-hover:shadow-primary/40 transition-shadow">
-            <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg gradient-primary flex items-center justify-center shadow-lg group-hover:shadow-primary/40 transition-shadow">
+            <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary-foreground" />
           </div>
           <span className="font-display font-bold text-lg sm:text-xl text-foreground">
             VoltSetu
@@ -196,7 +196,7 @@ export default function Navbar() {
               <UserMenu />
               <Link
                 to="/spots"
-                className="px-2.5 xl:px-4 py-2 rounded-xl bg-primary text-primary-foreground font-semibold text-[11px] xl:text-sm whitespace-nowrap hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5 animate-glow"
+                className="px-2.5 xl:px-4 py-1.5 rounded-xl bg-primary text-primary-foreground font-semibold text-[11px] xl:text-sm whitespace-nowrap hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5 animate-glow"
               >
                 <span className="hidden xl:inline">{t("common.findASpot")}</span>
                 <span className="inline xl:hidden">{t("nav.findSpots")}</span>
@@ -214,7 +214,7 @@ export default function Navbar() {
               </Button>
               <Button
                 onClick={() => setLoginModalOpen(true)}
-                className="px-2.5 xl:px-4 py-2 rounded-xl bg-primary text-primary-foreground font-semibold text-[11px] xl:text-sm whitespace-nowrap hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5"
+                className="px-2.5 xl:px-4 py-1.5 rounded-xl bg-primary text-primary-foreground font-semibold text-[11px] xl:text-sm whitespace-nowrap hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5"
               >
                 {t("nav.getStarted")}
               </Button>

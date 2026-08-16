@@ -275,6 +275,15 @@ export default function SpotCard({
     }
   };
 
+  // Popup press animation — a short scale-up pulse on tap/click so the card
+  // feels responsive on both touch and mouse.
+  const [popping, setPopping] = useState(false);
+  const handleCardPress = () => {
+    if (popping) return;
+    setPopping(true);
+    window.setTimeout(() => setPopping(false), 180);
+  };
+
   const getWhatsAppLink = () => {
     if (!hostPhone) return "#";
     const num = hostPhone.replace(/\D/g, "");
@@ -289,10 +298,14 @@ export default function SpotCard({
 
   return (
     <div
+      onClick={handleCardPress}
+      onPointerDown={handleCardPress}
       className={cn(
         "group relative bg-card rounded-2xl border border-border overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-1 flex flex-col h-full",
-        isFeatured && "ring-2 ring-primary/30"
+        isFeatured && "ring-2 ring-primary/30",
+        popping && "scale-[1.03] -translate-y-1 shadow-2xl duration-150 z-10"
       )}
+      style={{ transformOrigin: "center center" }}
     >
       {/* Image */}
       <div className="relative h-44 overflow-hidden flex-shrink-0">
