@@ -1,3 +1,4 @@
+import { default as AdminContainer } from "@/components/ui/responsive-container";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -71,7 +72,7 @@ export default function DemandHeatmap() {
   };
 
   return (
-    <div className="space-y-6">
+    <AdminContainer size="xl" className="py-6">
       <SEO
         title="Demand Heatmap — VoltSetu Admin"
         description="City-by-city demand vs supply insights."
@@ -219,6 +220,6 @@ export default function DemandHeatmap() {
           </CardContent>
         </Card>
       )}
-    </div>
+    </AdminContainer>
   );
 }

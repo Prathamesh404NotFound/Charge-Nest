@@ -5,7 +5,7 @@ import {
   decideVerificationCase,
   HostVerificationCase,
 } from "../../lib/hostVerificationService";
-import AdminRoute from "../../components/Admin/AdminRoute";
+import ResponsiveContainer from "../../components/ui/responsive-container";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
@@ -129,7 +129,7 @@ export default function AdminVerificationsPage() {
   const selectedIds = [...selected].filter((id) => selectableIds.includes(id));
 
   return (
-    <AdminRoute>
+    <ResponsiveContainer size="xl" className="py-6">
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -253,7 +253,7 @@ export default function AdminVerificationsPage() {
           </div>
         )}
       </div>
-    </AdminRoute>
+    </ResponsiveContainer>
   );
 }
 

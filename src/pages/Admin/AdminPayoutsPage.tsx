@@ -1,3 +1,4 @@
+import ResponsiveContainer from "@/components/ui/responsive-container";
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowDownToLine,
@@ -246,7 +247,8 @@ export default function AdminPayoutsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <ResponsiveContainer size="xl" className="py-6">
+
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
@@ -394,6 +396,6 @@ export default function AdminPayoutsPage() {
           ))}
         </div>
       )}
-    </div>
+    </ResponsiveContainer>
   );
 }

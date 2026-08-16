@@ -5,6 +5,7 @@
  */
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import ResponsiveContainer from "@/components/ui/responsive-container";
 import { Award, ArrowLeft, Users, Coins, Ticket, TrendingUp, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -69,7 +70,7 @@ export default function ReferralAdmin() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
+    <ResponsiveContainer size="xl" className="py-6">
       <SEO
         title="Referral Program | VoltSetu Admin"
         description="Audit the host referral program: codes, claims, credits and referral conversions."
@@ -186,6 +187,6 @@ export default function ReferralAdmin() {
         This dashboard is read-only. Credit adjustments are intentionally not exposed here — contact platform ops for corrections.
         Referral credit: ₹{CREDIT_PER_APPROVAL} per approved referred host.
       </p>
-    </div>
+    </ResponsiveContainer>
   );
 }

@@ -20,7 +20,7 @@ import {
   type AdminNotificationItem,
 } from "@/lib/adminNotificationsService";
 import { cn } from "@/lib/utils";
-import AdminLayoutPage from "@/components/Admin/AdminLayoutPage";
+import ResponsiveContainer from "@/components/ui/responsive-container";
 
 const KIND_META = {
   flag: { icon: Flag, label: "Flag", href: "/admin/moderation", accent: "text-red-500" },
@@ -56,7 +56,7 @@ export default function AdminNotificationsPage() {
   }, []);
 
   return (
-    <AdminLayoutPage>
+    <ResponsiveContainer size="xl" className="py-6">
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -143,6 +143,6 @@ export default function AdminNotificationsPage() {
           )}
         </div>
       </div>
-    </AdminLayoutPage>
+    </ResponsiveContainer>
   );
 }

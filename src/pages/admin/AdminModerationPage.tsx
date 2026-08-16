@@ -1,3 +1,4 @@
+import ResponsiveContainer from "@/components/ui/responsive-container";
 import { useEffect, useMemo, useState } from "react";
 import { Flag, FlagOff, UserX, Trash2, Loader2, Search, ShieldAlert, Ban } from "lucide-react";
 import { toast } from "sonner";
@@ -84,7 +85,7 @@ export default function AdminModerationPage() {
   }, [flags]);
 
   return (
-    <div className="space-y-6">
+    <ResponsiveContainer size="xl" className="py-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-display font-bold text-foreground flex items-center gap-2">
@@ -193,7 +194,7 @@ export default function AdminModerationPage() {
           </div>
         </div>
       )}
-    </div>
+    </ResponsiveContainer>
   );
 }
 
