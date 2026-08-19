@@ -1,9 +1,9 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, MapPin, Zap, Shield, Clock, Home, DollarSign, Users, CheckCircle, Sparkles, TrendingUp, Leaf, Loader2 } from "lucide-react";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
-import heroImg from "@/assets/hero-charging.jpg";
 import riderImg from "@/assets/rider-app.jpg";
 import StatsCounter from "@/components/StatsCounter";
+import ScrollExpandHero, { HeroProofChips } from "@/components/ScrollExpandHero";
 import SpotCard from "@/components/SpotCard";
 import FeatureCard from "@/components/FeatureCard";
 import TestimonialCarousel from "@/components/TestimonialCarousel";
@@ -92,93 +92,36 @@ const Index = () => {
   };
 
   const heroSection = (
-    <section className="relative min-h-[90vh] flex items-center pt-24 gradient-hero overflow-hidden">
-      {/* Animated Blobs */}
-      <div className="absolute top-20 left-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-blob" />
-      <div className="absolute bottom-20 right-10 w-96 h-96 bg-ev-green/15 rounded-full blur-3xl animate-blob-delayed" />
-      <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-primary/10 rounded-full blur-3xl animate-blob-delayed-2" />
-
-      <div className="container mx-auto px-4 relative z-10 py-16">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
-                    <div className="text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/10 text-white/80 text-sm mb-6 max-w-fit mx-auto lg:mx-0">
-              <Sparkles className="w-4 h-4 text-primary" /> India's Hyperlocal EV Charging Network
-            </div>
-            <h1 className="font-display font-bold display-tight text-5xl sm:text-6xl lg:text-7xl text-white mb-6 text-balance">
-              {user ? (
-                <>
-                  <span className="hero-word hero-word-d1">Welcome back — </span>
-                  <span className="hero-word hero-word-d2">find your </span>
-                  <span className="hero-word hero-word-d3 text-gradient">next charge</span>
-                </>
-              ) : (
-                <>
-                  <span className="hero-word hero-word-d1">Nearby EV charging spots.</span>
-                  <span className="hero-word-gap" aria-hidden="true"> </span>
-                  <span className="hero-word hero-word-d2">Income</span>
-                  <span className="hero-word-gap" aria-hidden="true"> </span>
-                  <span className="hero-word hero-word-d3">from</span>
-                  <span className="hero-word-gap" aria-hidden="true"> </span>
-                  <span className="hero-word hero-word-d4 text-gradient block mt-2 lg:inline lg:mt-0">your home outlet.</span>
-                </>
-              )}
-            </h1>
-            <p className="hero-sub text-base sm:text-lg text-white/80 max-w-lg mx-auto lg:mx-0 mb-8 leading-relaxed">
-              Charge your EV two-wheeler at verified home charging points near you — or list your outlet and start earning from every charge, with transparent pay-per-use pricing.
-            </p>
-            <div className="hero-cta flex flex-col sm:flex-row flex-wrap gap-4 justify-center lg:justify-start">
-              <button
-                onClick={handleFindSpots}
-                className="magnet-lift px-8 py-4 rounded-xl gradient-primary text-white font-semibold text-lg shadow-xl shadow-primary/25 hover:shadow-primary/40 flex items-center justify-center gap-2"
-              >
-                <MapPin className="w-5 h-5" /> Find a Spot
-              </button>
-              <button
-                onClick={handleBecomeHost}
-                className="magnet-lift px-8 py-4 rounded-xl bg-white/10 text-white border border-white/20 font-semibold text-lg hover:bg-white/20 flex items-center justify-center gap-2"
-              >
-                <Home className="w-5 h-5" /> Register Your Home
-              </button>
-            </div>
-            <div className="hero-proof flex flex-wrap items-center justify-center lg:justify-start gap-4 sm:gap-6 mt-8 text-white/60 text-sm font-medium">
-              <span className="flex items-center gap-1.5"><CheckCircle className="w-4 h-4 text-ev-green" /> Free to Join</span>
-              <span className="flex items-center gap-1.5"><Shield className="w-4 h-4 text-ev-green" /> Verified Hosts</span>
-              <span className="flex items-center gap-1.5"><Zap className="w-4 h-4 text-ev-green" /> Pay per Use</span>
-            </div>
-          </div>
-          <div className="relative hidden lg:block">
-            <div className="absolute inset-0 gradient-primary rounded-3xl blur-3xl opacity-20 scale-90" />
-            <img
-              src={heroImg}
-              alt="EV scooter charging at a home outlet"
-              className="relative rounded-3xl shadow-2xl w-full animate-float object-cover h-[500px]"
-              fetchPriority="high"
-            />
-            <div className="absolute -bottom-6 -left-6 glass rounded-2xl p-4 shadow-xl animate-float-delayed">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl gradient-green flex items-center justify-center">
-                  <Zap className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <div className="text-sm font-semibold text-foreground">Charging Active</div>
-                  <div className="text-xs text-muted-foreground">Rs 10 / 10 min</div>
-                </div>
-              </div>
-            </div>
-            <div className="absolute -top-5 -right-5 glass rounded-2xl px-4 py-3 shadow-xl animate-float">
-              <div className="flex items-center gap-2 text-sm">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-ev-green opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-ev-green"></span>
-                </span>
-                <span className="font-semibold text-foreground">Live now</span>
-                <span className="text-muted-foreground">· 3 riders charging</span>
-              </div>
-            </div>
-          </div>
+    <ScrollExpandHero
+      mediaSrc="https://videos.pexels.com/video-files/8992627/8992627-hd_1920_1080_30fps.mp4"
+      titleFirst={user ? "Welcome back —" : "Charge closer."}
+      titleRest={user ? "find your next charge" : "Earn from home."}
+      sub={undefined}
+      date="India's hyperlocal EV charging network"
+      scrollToExpand="Scroll to explore VoltSetu"
+    >
+      <div className="container mx-auto max-w-4xl text-center px-4">
+        <p className="text-base sm:text-lg text-white/80 max-w-xl mx-auto mb-8 leading-relaxed">
+          Charge your EV two-wheeler at verified home charging points near you — or list your outlet and start earning
+          from every charge, with transparent pay-per-use pricing.
+        </p>
+        <div className="flex flex-col sm:flex-row flex-wrap gap-4 justify-center">
+          <button
+            onClick={handleFindSpots}
+            className="magnet-lift px-8 py-4 rounded-xl gradient-primary text-white font-semibold text-lg shadow-xl shadow-primary/25 hover:shadow-primary/40 flex items-center justify-center gap-2"
+          >
+            <MapPin className="w-5 h-5" /> Find a Spot
+          </button>
+          <button
+            onClick={handleBecomeHost}
+            className="magnet-lift px-8 py-4 rounded-xl bg-white/10 text-white border border-white/20 font-semibold text-lg hover:bg-white/20 flex items-center justify-center gap-2"
+          >
+            <Home className="w-5 h-5" /> Register Your Home
+          </button>
         </div>
+        <HeroProofChips />
       </div>
-    </section>
+    </ScrollExpandHero>
   );
 
   const statsSection = <StatsCounter />;
