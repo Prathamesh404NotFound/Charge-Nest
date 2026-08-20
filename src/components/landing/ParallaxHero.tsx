@@ -29,42 +29,20 @@ const LAYERS: Array<{
   src?: string;
   alt?: string;
 }> = [
-  { y: -280, kind: "img", src: "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=1200&auto=format&fit=crop", alt: "EV charging station" },
+  { y: -120, kind: "img", src: "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=1200&auto=format&fit=crop", alt: "EV charging station" },
   { y: -220, kind: "img", src: "https://images.unsplash.com/photo-1620288627223-53302f4e8c74?w=1200&auto=format&fit=crop", alt: "Electric vehicle charging" },
-  { y: -160, kind: "title" },
-  { y: -40, kind: "img", src: "https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=1200&auto=format&fit=crop", alt: "Rider on electric scooter" },
+  { y: -60, kind: "title" },
+  { y: -20, kind: "img", src: "https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=1200&auto=format&fit=crop", alt: "Rider on electric scooter" },
 ];
 
-function LayerImage({ src, alt, y }: { src: string; alt: string; y: number }) {
-  const translateY = useSpring(useTransform(y, [0, 1], [0, y]), { stiffness: 60, damping: 20 });
-  return (
-    <motion.img
-      src={src}
-      alt={alt}
-      loading="eager"
-      width={800}
-      className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
-      style={{ translateY }}
-    />
-  );
-}
-
 export default function ParallaxHero() {
-  const heroRef = useSpring ? undefined : undefined; // kept for clarity; ref below
-  const containerRef = useSpring ? undefined : undefined;
-  void heroRef;
-  void containerRef;
-  const ref = (useScroll as unknown as { (): unknown }) ? undefined : undefined;
-  void ref;
-
   const { scrollYProgress } = useScroll();
   const reduceMotion = useReducedMotion();
   const progress = useSpring(scrollYProgress, { stiffness: 80, damping: 20 });
 
   // Hero section height: 200vh — scroll progress 0→1 runs across it
-  const headerOpacity = useTransform(progress, [0, 0.7, 1], [1, 1, 0]);
-  const contentFade = useTransform(progress, [0, 0.5], [0, 1]);
-  const contentY = useTransform(progress, [0, 0.5], [24, 0]);
+  const contentFade = useTransform(progress, [0.25, 0.65], [0, 1]);
+  const contentY = useTransform(progress, [0.25, 0.65], [24, 0]);
 
   return (
     <div ref={undefined} className="relative overflow-hidden bg-background">
@@ -82,8 +60,15 @@ export default function ParallaxHero() {
               layer.kind === "img" && layer.src ? (
                 <div
                   key={layer.src}
-                  className="absolute inset-0 overflow-hidden"
-                  style={{ zIndex: i === 0 ? 0 : i === 3 ? 30 : i * 10 }}
+                  // Framed, offset layers (like the original component) instead of
+                  // full-viewport covers so the giant title stays readable on top
+                  className={`absolute overflow-hidden rounded-2xl shadow-2xl ${
+                    i === 0
+                      ? "-left-[12%] -top-[18%] w-[52%] h-[78%] z-0"
+                      : i === 1
+                      ? "-right-[14%] top-[4%] w-[48%] h-[68%] z-10"
+                      : "left-[26%] -bottom-[10%] w-[54%] h-[60%] z-30 rotate-2"
+                  }`}
                 >
                   <ParallaxImage src={layer.src} alt={layer.alt!} y={layer.y} reduced={reduceMotion} />
                 </div>
