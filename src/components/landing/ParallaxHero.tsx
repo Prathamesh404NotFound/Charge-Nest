@@ -23,16 +23,17 @@ import { motion, useScroll, useTransform, useReducedMotion, useSpring } from "fr
 import { Link } from "react-router-dom";
 import { MapPin, Home } from "lucide-react";
 
+// Original yPercent values: 70 / 55 / 40 / 10 — travel N = yPercent * 4 px as per spec.
 const LAYERS: Array<{
   y: number; // how far (px) the layer moves relative to scroll
   kind: "img" | "title";
   src?: string;
   alt?: string;
 }> = [
-  { y: -120, kind: "img", src: "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=1200&auto=format&fit=crop", alt: "EV charging station" },
+  { y: -280, kind: "img", src: "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=1200&auto=format&fit=crop", alt: "EV charging station" },
   { y: -220, kind: "img", src: "https://images.unsplash.com/photo-1620288627223-53302f4e8c74?w=1200&auto=format&fit=crop", alt: "Electric vehicle charging" },
-  { y: -60, kind: "title" },
-  { y: -20, kind: "img", src: "https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=1200&auto=format&fit=crop", alt: "Rider on electric scooter" },
+  { y: -160, kind: "title" },
+  { y: -40, kind: "img", src: "https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=1200&auto=format&fit=crop", alt: "Rider on electric scooter" },
 ];
 
 export default function ParallaxHero() {
@@ -40,7 +41,8 @@ export default function ParallaxHero() {
   const reduceMotion = useReducedMotion();
   const progress = useSpring(scrollYProgress, { stiffness: 80, damping: 20 });
 
-  // Hero section height: 200vh — scroll progress 0→1 runs across it
+  // Header fades out over the last 30% of the pin (0.7→1), per spec.
+  const headerOpacity = useTransform(progress, [0, 0.7, 1], [1, 1, 0]);
   const contentFade = useTransform(progress, [0.25, 0.65], [0, 1]);
   const contentY = useTransform(progress, [0.25, 0.65], [24, 0]);
 
@@ -54,6 +56,7 @@ export default function ParallaxHero() {
         className="relative h-[200vh]"
         aria-label="VoltSetu hero"
       >
+        <motion.div style={{ opacity: reduceMotion ? 1 : headerOpacity }}>
         <div className="sticky top-0 h-screen overflow-hidden">
           <div className="absolute inset-0">
             {LAYERS.map((layer, i) =>
@@ -85,6 +88,7 @@ export default function ParallaxHero() {
             style={{ zIndex: 40 }}
           />
         </div>
+        </motion.div>
       </section>
 
       {/* ============ Content section (fades in over the hero) ============ */}
@@ -166,12 +170,35 @@ function ParallaxTitle({ y, reduced }: { y: number; reduced: boolean }) {
       <div className="px-3 py-1 rounded-full bg-primary/15 dark:bg-primary/20 border border-primary/30 text-primary text-xs font-bold uppercase tracking-[0.2em] mb-5">
         India's peer-to-peer EV charging network
       </div>
-      <h2 className="font-display font-bold text-[16vw] md:text-[11vw] leading-[0.95] tracking-squish text-foreground mix-blend-darken dark:mix-blend-lighten">
+      <h2 className="font-display text-[13vw] font-bold tracking-tight text-foreground/90">
         Volt<span className="text-primary">Setu</span>
       </h2>
-      <p className="mt-6 text-lg md:text-2xl text-foreground/80 max-w-md mx-auto font-medium">
+      <p className="mt-4 text-base md:text-xl text-foreground/70 max-w-md mx-auto font-medium">
         Charge anywhere your scooter reaches
       </p>
+
+      {/* CTA overlay inside the title layer (VoltSetu addition per spec) */}
+      <div className="mt-7 flex flex-col sm:flex-row flex-wrap gap-4 justify-center items-center">
+        <Link
+          to="/spots"
+          className="px-6 py-3 rounded-xl gradient-primary text-white font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-shadow"
+        >
+          Find a spot near you
+        </Link>
+        <Link
+          to="/host"
+          className="px-6 py-3 rounded-xl bg-transparent text-foreground border-2 border-primary/40 dark:border-primary/50 font-semibold hover:bg-primary/10 transition-colors"
+        >
+          List your spot
+        </Link>
+      </div>
+      <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs md:text-sm text-muted-foreground">
+        <span>1,240+ spots</span>
+        <span aria-hidden className="w-1 h-1 rounded-full bg-muted-foreground/50" />
+        <span>52 cities</span>
+        <span aria-hidden className="w-1 h-1 rounded-full bg-muted-foreground/50" />
+        <span>hosts earn monthly</span>
+      </div>
     </motion.div>
   );
 }
