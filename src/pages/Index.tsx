@@ -3,7 +3,9 @@ import { ArrowRight, MapPin, Zap, Shield, Clock, Home, DollarSign, Users, CheckC
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import riderImg from "@/assets/rider-app.jpg";
 import StatsCounter from "@/components/StatsCounter";
-import ScrollExpandHero, { HeroProofChips } from "@/components/ScrollExpandHero";
+
+import ParallaxHero from "@/components/landing/ParallaxHero";
+import FeatureGrid from "@/components/landing/FeatureGrid";
 import SpotCard from "@/components/SpotCard";
 import FeatureCard from "@/components/FeatureCard";
 import TestimonialCarousel from "@/components/TestimonialCarousel";
@@ -91,38 +93,8 @@ const Index = () => {
     window.location.href = '/host';
   };
 
-  const heroSection = (
-    <ScrollExpandHero
-      mediaSrc="https://videos.pexels.com/video-files/8992627/8992627-hd_1920_1080_30fps.mp4"
-      titleFirst={user ? "Welcome back —" : "Charge closer."}
-      titleRest={user ? "find your next charge" : "Earn from home."}
-      sub={undefined}
-      date="India's hyperlocal EV charging network"
-      scrollToExpand="Scroll to explore VoltSetu"
-    >
-      <div className="container mx-auto max-w-4xl text-center px-4">
-        <p className="text-base sm:text-lg text-white/80 max-w-xl mx-auto mb-8 leading-relaxed">
-          Charge your EV two-wheeler at verified home charging points near you — or list your outlet and start earning
-          from every charge, with transparent pay-per-use pricing.
-        </p>
-        <div className="flex flex-col sm:flex-row flex-wrap gap-4 justify-center">
-          <button
-            onClick={handleFindSpots}
-            className="magnet-lift px-8 py-4 rounded-xl gradient-primary text-white font-semibold text-lg shadow-xl shadow-primary/25 hover:shadow-primary/40 flex items-center justify-center gap-2"
-          >
-            <MapPin className="w-5 h-5" /> Find a Spot
-          </button>
-          <button
-            onClick={handleBecomeHost}
-            className="magnet-lift px-8 py-4 rounded-xl bg-white/10 text-white border border-white/20 font-semibold text-lg hover:bg-white/20 flex items-center justify-center gap-2"
-          >
-            <Home className="w-5 h-5" /> Register Your Home
-          </button>
-        </div>
-        <HeroProofChips />
-      </div>
-    </ScrollExpandHero>
-  );
+  // 21st.dev adaptation: Parallax Scrolling hero (@osmosupply/components/parallax-scrolling)
+  const heroSection = <ParallaxHero />;
 
   const statsSection = <StatsCounter />;
 
@@ -465,6 +437,7 @@ const Index = () => {
         schema={faqSchema}
       />
       {heroSection}
+      <FeatureGrid />
 
       {user ? (
         <>
